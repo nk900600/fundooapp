@@ -1,0 +1,27 @@
+{% extends 'user/base' %}
+
+{% block content %}
+
+<div align="center" >
+    <h1> Registration </h1>
+    <form action="" method="post">
+        {% csrf_token %}
+
+        <input type="text" name="name" placeholder="name" required> <br><br>
+        <input type="text" name="username" placeholder="username" required> <br><br>
+        <input type="email" name="email" placeholder="Email address" required> <br><br>
+        <input type="password" name="password1" placeholder="Password1" required> <br><br>
+        <input type="password" name="password2" placeholder="Password2" required> <br><br>
+        <input type="submit">
+        <br>
+        <li><a href="/login">already have an account </a></li>
+
+    </form>
+    </div>
+    <div align="center">
+        {% for message in messages %}
+        <h3>{{message}}</h3>
+        {% endfor %}
+    </div>
+
+{% endblock %}

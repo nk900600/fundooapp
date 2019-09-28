@@ -1,10 +1,16 @@
 # from django.core import serializers
+
 from rest_framework import serializers
-from .models import Notes
+from .models import Notes,Lable
 
 
 class NotesSerializer(serializers.ModelSerializer):
-    class meta:
+    class Meta:
         model = Notes
-        fields = ["title", 'Note', 'image', 'archive', 'delete_note', 'label', 'colabrator', 'copy', 'checkbox', 'pin',
-                  'trash']
+        fields = '__all__'
+
+
+class LabelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lable
+        fields = '__all__'

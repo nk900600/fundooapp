@@ -1,6 +1,7 @@
 from django.contrib.auth.models import User
 from django.db import models
 
+
 # Create your models here.
 class Notes(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -14,12 +15,17 @@ class Notes(models.Model):
     copy = models.BooleanField("make a copy", default=False)
     checkbox = models.BooleanField("check box", default=False)
     pin = models.BooleanField(default=False)
-    trash = models.BooleanField(default=False)
+    # trash = models.BooleanField(default=False)
 
     def __str__(self):
         return self.Title
 
 
 class Lable(models.Model):
-    notes = models.ForeignKey(Notes,on_delete=models.CASCADE)
-    label = models.CharField(max_length=500)
+    notes = models.ForeignKey(Notes, on_delete=models.CASCADE)
+    label = models.ManyToManyField
+
+#
+# class Colabrator(models.Model):
+#     notes = models.ForeignKey(Notes , on_delete = models.CASCADE)
+#     colabrator = models.ManyToManyField

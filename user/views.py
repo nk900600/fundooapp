@@ -8,17 +8,24 @@ from django.contrib import messages
 from django.contrib.auth.models import User, auth
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 from jwt import ExpiredSignatureError
+from rest_framework import generics
+from rest_framework.exceptions import ValidationError
+from rest_framework.generics import GenericAPIView
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from services.amazones3 import upload_file
+from services.token import token_activation, token_validation
 from user.decorator import login_decorator
+from .serializer import RegistrationSerializer, UserSerializer, LoginSerializer, ResetSerializer, EmailSerializer
+from django.core.validators import validate_email
 
 AUTH_ENDPOINT = "http://127.0.0.1:8000/api/token/"
+
 
 def home(request):
     """
@@ -28,33 +35,34 @@ def home(request):
     return render(request, 'user/index.html')
 
 
-class Registrations(APIView):
+class Registrations(GenericAPIView):
     """
     :param request: request is made after filling the form
     :return: will send him the JWT token for validation
     """
-    @staticmethod
-    def get(request):
+    serializer_class = UserSerializer
+
+    def get(self, request):
         return render(request, 'user/registration.html')
 
+    def post(self, request):
 
-    @staticmethod
-    # @csrf_exempt
-    def post(request):
-        print(request.method)
-        # if request.method == 'POST':
-        firstname = request.POST['name']
-        username = request.POST['username']
-        email = request.POST['email']
-        password = request.POST['password1']
-        file = request.FILES.get('file')
-        print(file)
-        filename=str(username)+str(file)
-        upload_file(file,filename)
-        url="https://django-s3-files.s3.us-east-2.amazonaws.com/"+filename
+        username = request.data['username']
+        email = request.data['email']
+        password = request.data['password']
 
+        smd = {
+            'success': False,
+            'message': "not registered yet",
+            'data': [],
+        }
+
+        try:
+            validate_email(email)
+        except Exception as e:
+            return HttpResponse(json.dumps("please enter vaild email address"))
         # user input is checked
-        if firstname == "" or username == "" or email == "" or password == "":
+        if username == "" or email == "" or password == "":
             messages.info(request, "one of the above field is empty")
             return redirect('/registration')
 
@@ -70,16 +78,13 @@ class Registrations(APIView):
 
         else:
             userCreated = User.objects.create_user(username=username, email=email, password=password,
-                                                   first_name=firstname, is_active=False)
+                                                   is_active=False)
             userCreated.save()
 
             # user is unique then we will send token to his/her email for validation
             if userCreated is not None:
-                data = {
-                    'username': username,
-                    'password': password
-                }
-                token = jwt.encode(data, settings.SECRET_KEY, algorithm="HS256").decode('utf-8')
+
+                token = token_activation(username, password)
                 mail_subject = "Activate your account by clicking below link"
                 mail_message = render_to_string('user/activatetoken.html', {
                     'user': userCreated.username,
@@ -92,92 +97,103 @@ class Registrations(APIView):
                     # email is sent from here with the url link
                     email.send()
                 except SMTPAuthenticationError:
-                    messages.info(request, "please enter vaild email address")
-                    return redirect('/registration')
+                    smd = {
+                        'success': True,
+                        'message': 'please check the mail and click on the link  for validation',
+                        'data': [token],
+                    }
+                    return HttpResponse(json.dumps(smd))
+                return HttpResponse(json.dumps(smd))
 
-                messages.info(request, "please check your mail for the validation link ")
-                return render(request,'user/s3testing.html', {'url': url})
 
-
-class Login(APIView):
+class Login(GenericAPIView):
     """
     :param APIView: user request is made from the user
     :return: will check the credentials and will user
     """
+    serializer_class = LoginSerializer
 
     def get(self, request):
         return render(request, 'user/login.html')
 
     def post(self, request):
 
-        username = request.POST['username']
-        password = request.POST['password']
-
+        username = request.data['username']
+        password = request.data['password']
+        smd = {
+            'success': False,
+            'message': "not logged in ",
+            'data': []
+        }
         # validation is done
         if username == "" or password == "":
             messages.info(request, "one of the above field is empty")
             return redirect('/login')
         user = auth.authenticate(username=username, password=password)
-
         # if user is not none then we will generate token
         if user is not None:
-            data = {
-                'username': username,
-                'password': password
-            }
-            # here token is created and data is stored in redis
-            # token = jwt.encode(data, settings.SECRET_KEY, algorithm="HS256").decode('utf-8')
-            r = requests.post(AUTH_ENDPOINT, data=data)
-            token=r.json()['access']
-            print(token )
-
-
-            # smd format is used for display token
+            token = token_validation(username, password)
             smd = {
                 'success': True,
                 'message': "successfully logged",
-                'token': token,
-                'username': username,
-
+                'data': [token],
             }
-            messages.info(request, "logged in")
-            # return HttpResponse(json.dumps(smd))
-            return render(request,"user/note.html",smd)
+            return HttpResponse(json.dumps(smd))
         else:
-            messages.info(request, "one of the above field is empty")
-            # return redirect('/login')
-            return Response("not registered yet")
+            return HttpResponse(json.dumps(smd))
 
 
-@csrf_exempt
-def forgot_password(request):
+class Hello(GenericAPIView):
+    permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *arqs, **kwargs):
+        return Response(json.dumps("hi"))
+
+
+class Logout(GenericAPIView):
+    # permission_classes = (IsAuthenticated,)
+
+    def get(self, request, *arqs, **kwargs):
+        """
+        :param request: logout request is made
+        :return: we will delete the token which was stored in redis
+        """
+        # Authorization
+        # print(request.META['HTTP_AUTHORIZATION'])
+        print('hello')
+        return Response(json.dumps("hi"))
+
+
+class ForgotPassword(GenericAPIView):
     """
     :param request: request is made for resetting password
     :return:  will return email where password reset link will be attached
     """
+    serializer_class = EmailSerializer
     global user, user_info
-    if request.method == 'POST':
-        email = request.POST["email"]
 
+    def get(self,request):
+        return HttpResponse(json.dumps("hi"))
+
+    def post(self,request):
+
+        email = request.data["email"]
+        smd = {
+            'success': False,
+            'message': "not a vaild email ",
+            'data': []
+        }
         # email validation is done here
         if email == "":
-            messages.info(request, "please enter a vaild email address")
-            return redirect('/login/forgotpassword')
+            return HttpResponse(json.dumps(smd))
         else:
             try:
                 user = User.objects.get(email=email)
 
-
                 #  here user is not none then token is generated
                 if user is not None:
-                    username = user.username
 
-                    data = {
-                        'username': username,
-                        'password': user.id
-                    }
-                    # r = requests.post(AUTH_ENDPOINT, data=data)
-                    token = jwt.encode(data, settings.SECRET_KEY, algorithm="HS256").decode('utf-8')
+                    token = token_activation(user.username,user.id)
                     # email is generated  where it is sent the email address entered in the form
                     mail_subject = "Activate your account by clicking below link"
                     mail_message = render_to_string('user/reset_password_token_link.html', {
@@ -188,17 +204,20 @@ def forgot_password(request):
                     recipientemail = user.email
                     email = EmailMessage(mail_subject, mail_message, to=[recipientemail])
                     email.send()
+
+                    smd = {
+                        'success': True,
+                        'message': "check email for vaildation ",
+                        'data': []
+                    }
                     # here email is sent to user
-                    messages.info(request, "please check your mail for the resetting password ")
+                    return HttpResponse(json.dumps(smd))
                 else:
-                    messages.info(request, 'not a registered email address')
-                    return redirect('/login/forgotpassword')
+                    return HttpResponse(json.dumps(smd))
             except Exception as e:
-                messages.info(request, 'not a registered email address')
-                return redirect('/login/forgotpassword')
-            return redirect('/login/forgotpassword')
-    else:
-        return render(request, 'user/forgotpassword.html')
+                return HttpResponse(json.dumps(smd))
+
+
 
 
 def activate(request, token):
@@ -259,44 +278,52 @@ def reset_password(request, token):
         return redirect('login/forgotpassword')
 
 
-def resetpassword(request, user_reset):
+class ResetPassword(GenericAPIView):
     """
     :param user_reset: username is fetched
     :param request:  user will request for resetting password
     :return: will chnage the password
     """
-    if request.method == 'POST':
-        password1 = request.POST['password1']
-        password2 = request.POST['password2']
+    serializer_class = ResetSerializer
 
-        # password validation is done in this form
-        if password1 == "" or password2 == "":
-            messages.info(request, "please check the re entered password again")
-            return redirect("/login/forgotpassword/resetpassword/" + str(user_reset))
+    def get(self):
+        return HttpResponse(json.dumps("hi"))
 
-        elif password2 != password1:
-            messages.info(request, "please check the re entered password again")
-            return redirect("/login/forgotpassword/resetpassword/" + str(user_reset))
+    def post(self, request, user_reset):
 
-        else:
-            user = User.objects.get(username=user_reset)
-            user.set_password(password1)
-            # here we will save the user password in the database
-            user.save()
-            messages.info(request, "password reset done")
-            return redirect("/login")
-    else:
-        return render(request, 'user/resetpassword.html')
+        password1 = request.data['password']
+        password2 = request.data['password']
 
-@login_decorator
-def logout(request):
-    """
-    :param request: logout request is made
-    :return: we will delete the token which was stored in redis
-    """
+        smd = {
+            'success': False,
+            'message': 'password reset not done',
+            'data': [],
+        }
+        try:
+            # password validation is done in this form
+            if password1 == "" or password2 == "":
+                return HttpResponse(json.dumps(smd))
 
-    messages.info(request, "logged out")
-    return render(request, 'user/logout.html')
+            elif password2 != password1:
+                return HttpResponse(json.dumps(smd))
+
+            elif user_reset is None:
+                return HttpResponse(json.dumps(smd))
+
+            else:
+                user = User.objects.get(username=user_reset)
+                user.set_password(password1)
+                # here we will save the user password in the database
+                user.save()
+
+                smd = {
+                    'success': True,
+                    'message': 'password reset done',
+                    'data': [],
+                }
+                return HttpResponse(json.dumps(smd))
+        except Exception:
+            return HttpResponse(json.dumps(smd))
 
 
 def session(request):

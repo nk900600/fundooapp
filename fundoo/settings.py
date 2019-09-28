@@ -29,7 +29,7 @@ SECRET_KEY = os.getenv('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
+AUTH_ENDPOINT = os.getenv('AUTH_ENDPOINT')
 ALLOWED_HOSTS = []
 
 # Application definition
@@ -44,11 +44,13 @@ INSTALLED_APPS = [
     'rest_framework_swagger',
     'user',
     'note',
-    'rest_framework_jwt',
+
     'storages',
     'rest_framework',
-    'corsheaders'
+    'corsheaders',
+
 ]
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -58,11 +60,15 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
     'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.common.BrokenLinkEmailsMiddleware',
     'django.middleware.common.CommonMiddleware',
+
 ]
 
 ROOT_URLCONF = 'fundoo.urls'
+CORS_ORIGIN_ALLOW_ALL = True
 
 TEMPLATES = [
     {
@@ -93,13 +99,15 @@ WSGI_APPLICATION = 'fundoo.wsgi.application'
 #     }
 # }
 
-REST_FRAMEWORKS = {
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ),
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
-    # 'DEFAULT_AUTHENTICATION_CLASSES': [
-    #     'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
-    # ],
+#     'DEFAULT_PERMISSION_CLASSES': {'rest_framework.permissions.IsAdminUser'
+#
+# }
 }
-
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -154,21 +162,23 @@ STATIC_URL = '/static/'
 
 # REST_FRAMEWORKS = {
 #     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
-#     # 'DEFAULT_AUTHENTICATION_CLASSES': (
-    #     'rest_framework_simplejwt.authentication.JSONWebTokenAuthentication',
-    # ),
+#     'DEFAULT_AUTHENTICATION_CLASSES': (
+#         'rest_framework_simplejwt.authentication.JSONWebTokenAuthentication',
+#     ),
 
-    # 'DEFAULT_PERMISSION_CLASSES': [
-    #     'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
-    # ],
+# 'DEFAULT_PERMISSION_CLASSES': [
+#     'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+# ],
 # }
 
-SWAGGER_SETTINGS = {
-    'SECURITY_DEFINITIONS': {
-        'basic': {
-            'type': 'basic'
-        }
-    }}
+# SWAGGER_SETTINGS = {
+#     'SECURITY_DEFINITIONS': {
+#         'api_key': {
+#             'type': 'apiKey',
+#             'in': 'header',
+#             'name': ' Authorization'
+#         }
+#     }}
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': datetime.timedelta(days=1),

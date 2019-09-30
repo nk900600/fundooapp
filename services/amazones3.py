@@ -1,3 +1,13 @@
+"""
+ ******************************************************************************
+ *  Purpose: purpose is to store image to s3 bucket
+ *
+ *  @author  Nikhil Kumar
+ *  @version 3.7
+ *  @since   30/09/2019
+ ******************************************************************************
+"""
+
 import logging
 import boto3
 from botocore.exceptions import ClientError
@@ -17,7 +27,7 @@ def upload_file(file_name, object_name=None):
     # Upload the file
     s3_client = boto3.client('s3')
     try:
-        response = s3_client.upload_fileobj(file_name, 'django-s3-files', object_name)
+        response = s3_client.upload_file(file_name, 'django-s3-files', object_name)
     except ClientError as e:
         logging.error(e)
         return False

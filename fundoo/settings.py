@@ -44,10 +44,11 @@ INSTALLED_APPS = [
     'rest_framework_swagger',
     'user',
     'note',
-
+    'social_django',
     'storages',
     'rest_framework',
     'corsheaders',
+
 
 ]
 
@@ -64,6 +65,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.BrokenLinkEmailsMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'social_django.middleware.SocialAuthExceptionMiddleware',  # <--
 
 ]
 
@@ -82,6 +84,9 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+
+                'social_django.context_processors.backends',  # <--
+                'social_django.context_processors.login_redirect',  # <--
             ],
         },
     },
@@ -98,6 +103,22 @@ WSGI_APPLICATION = 'fundoo.wsgi.application'
 #         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
 #     }
 # }
+
+AUTHENTICATION_BACKENDS = (
+    'social_core.backends.github.GithubOAuth2',
+    'social_core.backends.twitter.TwitterOAuth',
+    'social_core.backends.facebook.FacebookOAuth2',
+    'social_core.backends.google.GoogleOAuth2',
+
+    'django.contrib.auth.backends.ModelBackend',
+)
+
+LOGIN_URL = 'login/'
+LOGOUT_URL = 'logout/'
+LOGIN_REDIRECT_URL = '/note'
+
+url = 'https://django-s3-files.s3.us-east-2.amazonaws.com/'
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -171,14 +192,14 @@ STATIC_URL = '/static/'
 # ],
 # }
 
-# SWAGGER_SETTINGS = {
-#     'SECURITY_DEFINITIONS': {
-#         'api_key': {
-#             'type': 'apiKey',
-#             'in': 'header',
-#             'name': ' Authorization'
-#         }
-#     }}
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'api_key': {
+            'type': 'apiKey',
+            'in': 'header',
+            'name': ' Authorization'
+        }
+    }}
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': datetime.timedelta(days=1),
@@ -205,3 +226,11 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_LIFETIME': datetime.timedelta(minutes=5),
     'SLIDING_TOKEN_REFRESH_LIFETIME': datetime.timedelta(days=1),
 }
+
+
+SOCIAL_AUTH_GITHUB_KEY = 'c6e48902def5368d9c32'
+SOCIAL_AUTH_GITHUB_SECRET = 'f1ba48b7f2e815d9255d46f71c87228eada2589e'
+
+
+SOCIAL_AUTH_FACEBOOK_KEY = '371457487066750'  # App ID
+SOCIAL_AUTH_FACEBOOK_SECRET = '6e7b5a0f08529a973d56f1d67da6b4f2'  # App Secret

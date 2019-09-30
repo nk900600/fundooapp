@@ -15,7 +15,7 @@ urlpatterns = [
     path('activate/<token>/', views.activate, name="activate"),
     path('reset_password/<token>/', views.reset_password, name="reset_password"),
     path('login/forgotpassword/resetpassword/<user_reset>', views.ResetPassword.as_view(), name="resetpassword"),
-    path('logout/', views.Logout.as_view() ,name="Logout"),
+    path('logout/', views.Logout ,name="Logout"),
     path('session/', views.session),
     path('hello/', views.Hello.as_view(), name ="hello"),
 

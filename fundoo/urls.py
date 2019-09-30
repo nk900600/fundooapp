@@ -17,10 +17,13 @@ from django.contrib import admin
 from django.urls import path
 from django.conf.urls import include, url
 from services.swagger_view import schema_view
+from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
     path("",include('user.url')),
     path("",include('note.url')),
-    url('fundoo/',schema_view, name="swagger")
+    url('fundoo/',schema_view, name="swagger"),
+    url(r'^oauth/', include('social_django.urls', namespace='social')),  # <--
+    url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 ]

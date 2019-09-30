@@ -1,30 +1,35 @@
+"""
+ ******************************************************************************
+ *  Purpose: will save user details after registrations
+ *
+ *  @author  Nikhil Kumar
+ *  @version 3.7
+ *  @since   30/09/2019
+ ******************************************************************************
+"""
+
 import json
-import re
 from smtplib import SMTPAuthenticationError
 import jwt
-import requests
 from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth.models import User, auth
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.template.loader import render_to_string
 from django.views.decorators.csrf import csrf_exempt
 from jwt import ExpiredSignatureError
-from rest_framework import generics
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import GenericAPIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from services.token import token_activation, token_validation
-from user.decorator import login_decorator
 from .serializer import RegistrationSerializer, UserSerializer, LoginSerializer, ResetSerializer, EmailSerializer
 from django.core.validators import validate_email
 
-AUTH_ENDPOINT = "http://127.0.0.1:8000/api/token/"
+
 
 
 def home(request):
@@ -139,6 +144,7 @@ class Login(GenericAPIView):
                 'data': [token],
             }
             return HttpResponse(json.dumps(smd))
+            # return redirect('/logout')
         else:
             return HttpResponse(json.dumps(smd))
 
@@ -161,7 +167,19 @@ class Logout(GenericAPIView):
         # Authorization
         # print(request.META['HTTP_AUTHORIZATION'])
         print('hello')
+        # return Response(json.dumps("hi"))
+        return render(request,"user/logout.html")
+
+    def post(self, request, *arqs, **kwargs):
+        """
+        :param request: logout request is made
+        :return: we will delete the token which was stored in redis
+        """
+        # Authorization
+        # print(request.META['HTTP_AUTHORIZATION'])
+        print('hello')
         return Response(json.dumps("hi"))
+        # return render(request, "user/logout.html")
 
 
 class ForgotPassword(GenericAPIView):
@@ -286,8 +304,12 @@ class ResetPassword(GenericAPIView):
     """
     serializer_class = ResetSerializer
 
-    def get(self):
-        return HttpResponse(json.dumps("hi"))
+    def get(self, request, user_reset):
+        try:
+            user = User.objects.get(id=user_reset)
+            return HttpResponse(json.dumps("hey user"))
+        except Exception:
+            return HttpResponse(json.dumps("not a vaild url"))
 
     def post(self, request, user_reset):
 

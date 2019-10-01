@@ -28,10 +28,11 @@ def upload_file(file_name, object_name=None):
     s3_client = boto3.client('s3')
     try:
         response = s3_client.upload_file(file_name, 'django-s3-files', object_name)
-    except ClientError as e:
-        logging.error(e)
+    except ClientError as error:
+        logging.error(error)
         return False
-    return True
+    return response
 #
 # s3_client = boto3.client('s3')
-# s3_client.upload_file('/home/admin1/PycharmProjects/fundooapp/hello', 'django-s3-files', 'fidefdrstdcvdtupload')
+# s3_client.upload_file('/home/admin1/PycharmProjects/fundooapp/hello',
+# 'django-s3-files', 'fidefdrstdcvdtupload')

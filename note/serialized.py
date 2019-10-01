@@ -8,7 +8,7 @@ class NotesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notes
         # fields = '__all__'
-        fields = ['user', 'title', 'note', 'label', 'colaborator', 'archive', 'checkbox', 'pin',]
+        fields = ['title', 'note', 'label',  'archive', 'checkbox', 'pin',]
 
 
 # class LabelSerializer(serializers.ModelSerializer):

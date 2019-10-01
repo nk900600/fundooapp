@@ -1,12 +1,13 @@
-from django.test import TestCase
-import pytest
+"""
+this file is created for test cases, test case for registrations and login apis are ran 
+"""
 import requests
 import unittest
 
 # Create your tests here.
 
-base_url = 'http://127.0.0.1:8000'
-registration = {
+BASE_URL = 'http://127.0.0.1:8000'
+RESGISTRATION = {
     "name": "nikhil",
     'username': 'nk90600',
     'email': 'niksroad2success@gamil.com',
@@ -14,23 +15,31 @@ registration = {
     'password2': "pankaj"
 }
 
-login = {
+LOGIN = {
     'username': 'admin',
     'password': "admin",
 }
 
 
 class TestRegistration(unittest.TestCase):
-
+    """
+    test case is created and test with predefined values
+    """
     def test_registration(self):
-        url = base_url + '/registration'
-        data = registration
+        """
+        test case is created for registrations and test with predefined values
+        """
+        url = BASE_URL + '/registration'
+        data = RESGISTRATION
         response = requests.post(url=url, data=data)
         assert response.status_code == 200
 
     def test_login(self):
-        url = base_url + '/login'
-        data = login
+        """
+        test case is created for login and test with predefined values
+        """
+        url = BASE_URL + '/login'
+        data = LOGIN
         response = requests.post(url=url, data=data)
         assert response.status_code == 200
 

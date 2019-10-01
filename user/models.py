@@ -1,9 +1,13 @@
+"""
+this file is used for creating models
+"""
 from django.db import models
 from django import forms
-from django.contrib.auth.signals import user_logged_in, user_logged_out
 
 class Registration(models.Model):
-
+    """
+    This model is used for taking user information
+    """
     name = models.CharField(max_length=100)
     username = models.CharField(max_length=100)
     email = models.EmailField()
@@ -16,5 +20,8 @@ class Registration(models.Model):
         return str(self.name)
 
     class Meta:
+        """
+        name is given which will be displayed in admin page
+        """
         verbose_name = 'user detail'
         verbose_name_plural = 'user details '

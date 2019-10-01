@@ -14,16 +14,18 @@ from django.db import IntegrityError
 from django.http import HttpResponse
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
+from django.contrib.auth.models import User
 from fundoo import settings
+from services.amazones3 import upload_file
 from .models import Notes, Lable
 from note.serialized import NotesSerializer, UpdateSerializer
-from services.amazones3 import upload_file
+
 
 
 class Create(GenericAPIView):
     serializer_class = NotesSerializer
 
-    def get(self, request, *args, **kwargs):
+    def get(self, request):
         """
        :param request:  request from user
        :param args:
@@ -35,7 +37,7 @@ class Create(GenericAPIView):
 
         return Response(note_ser.data)
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request):
         """
         :param request:  request from user
         :param args:
@@ -55,12 +57,12 @@ class Create(GenericAPIView):
 
 
 
-            user = request.data['user']
+            # user = request.data['user']
             title = request.data['title']
             note = request.data['note']
             label = request.data['label']
-            colaborator = request.data['colaborator']
-            archive = request.data['archive']
+            # colaborator = request.data['colaborator']
+            # archive = request.data['archive']
             checkbox = request.data['checkbox']
             pin = request.data['pin']
             # images = request.data['image']
@@ -72,18 +74,23 @@ class Create(GenericAPIView):
             else:
                 # upload_file(str(images), str(user) + str(images))
                 # image_url = settings.url + str(user) + str(images)
+                #  users = User.objects.filter(email__in=colaborator)   #colabartor
+                print(">>>>>>>>>>>")
+                user = User.objects.get(pk=1)
 
-                note_create = Notes.objects.create(user_id=user, title=title, note=note, label=label,
-                                                   colabrator=colaborator,
-                                                   archive=archive, checkbox=checkbox, pin=pin, )
+                note_create = Notes(user_id=user.id, title=title, note=note,
+                                    checkbox=checkbox, pin=pin, )
+                print("ffffffffff")
 
                 note_create.save()
-
-                label = Lable.objects.filter(name=label)
-
-                if label is None :
-                    l = Lable.objects.create(name=label)
-                    l.save()
+                lab = Lable.objects.create(name=label)
+                note_create.label.add(lab)
+                print(">>>>>>>>DSFfffffFFFFFFFFFf")
+                # label = Lable.objects.filter(name=label)
+                #
+                # if label is None :
+                #     l = Lable.objects.create(name=label)
+                #     l.save()
 
 
                 smd["success"] = True
@@ -104,9 +111,9 @@ class Update(GenericAPIView):
         :return:  will render notes url
         """
         try:
-            note = Notes.objects.get(id=note_id)
+            Notes.objects.get(id=note_id)
             return HttpResponse(json.dumps("hi"))
-        except (Exception) as e:
+        except Exception:
             return HttpResponse(json.dumps('not a vaild url '))
 
     def put(self, request, note_id):
@@ -117,7 +124,7 @@ class Update(GenericAPIView):
             title = request.data['title']
             note = request.data['note']
             label = request.data['label']
-            Collaborators = request.data['colaborator']
+            collaborators = request.data['colaborator']
             archive = request.data['archive']
             checkbox = request.data['checkbox']
             pin = request.data['pin']
@@ -125,31 +132,28 @@ class Update(GenericAPIView):
             delete = request.data["delete_note"]
             copy = request.data["copy"]
 
-            validate_email(Collaborators)
+            validate_email(collaborators)
 
             if note == "":
-                return HttpResponse(json.dumps(smd))
+                HttpResponse(json.dumps(smd))
             elif delete == True:
                 Notes.objects.flter(id=note_id).delete()
                 smd = {'success': True, 'message': 'note is deleted ', 'data': []}
-                return HttpResponse(json.dumps(smd))
+                HttpResponse(json.dumps(smd))
             elif copy == True:
                 new = Notes.objects.get(id=note_id)
                 new.pk = None
                 new.save()
                 smd = {'success': True, 'message': 'note copy is created ', 'data': []}
-                return HttpResponse(json.dumps(smd))
+                HttpResponse(json.dumps(smd))
 
             else:
                 upload_file(str(images), str(user) + str(images))
                 image_url = settings.url + str(user) + str(images)
 
-                note_update = Notes.objects.filter(id=note_id).update(user_id=user, title=title, note=note, label=label,
-                                                                      colabrator=Collaborators, image=image_url,
-                                                                      archive=archive, checkbox=checkbox, pin=pin)
-
+                note_update = Notes.objects.filter(id=note_id).update(user_id=user, title=title, note=note, image=image_url,
+                                                   archive=archive, checkbox=checkbox, pin=pin)
                 note_update.save()
-
                 label = Lable.objects.filter(name=label)
 
                 if label is None:
@@ -163,46 +167,46 @@ class Update(GenericAPIView):
             return HttpResponse(json.dumps(smd))
 
 
-class Archive(GenericAPIView):
+# class Archive(GenericAPIView):
 
-    def get(self, request, user_id):
-        pass
+#     def get(self, request, user_id):
+#         pass
 
-    def post(self, request, user_id):
-        pass
-
-
-class Trash(GenericAPIView):
-
-    def get(self, request):
-        pass
-
-    def post(self, request, user_id):
-        pass
+#     def post(self, request, user_id):
+#         pass
 
 
-class Reminders(GenericAPIView):
+# class Trash(GenericAPIView):
 
-    def get(self, request):
-        pass
+#     def get(self, request):
+#         pass
 
-    def post(self, request):
-        pass
-
-
-class Lables(GenericAPIView):
-
-    def get(self, request, label):
-        pass
-
-    def post(self, request, label):
-        pass
+#     def post(self, request, user_id):
+#         pass
 
 
-class Pin(GenericAPIView):
+# class Reminders(GenericAPIView):
 
-    def get(self, request, user_id):
-        pass
+#     def get(self, request):
+#         pass
 
-    def post(self, request, user_id):
-        pass
+#     def post(self, request):
+#         pass
+
+
+# class Lables(GenericAPIView):
+
+#     def get(self, request, label):
+#         pass
+
+#     def post(self, request, label):
+#         pass
+
+
+# class Pin(GenericAPIView):
+
+#     def get(self, request, user_id):
+#         pass
+
+#     def post(self, request, user_id):
+#         pass

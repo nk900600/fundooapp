@@ -10,7 +10,8 @@
 
 import jwt
 import requests
-from fundoo import settings
+from fundoo.settings import SECRET_KEY, AUTH_ENDPOINT
+# import fundoo.settings as settings
 
 
 def token_activation(username, password):
@@ -24,7 +25,7 @@ def token_activation(username, password):
         'username': username,
         'password': password
     }
-    token = jwt.encode(data, settings.SECRET_KEY, algorithm="HS256").decode('utf-8')
+    token = jwt.encode(data, SECRET_KEY, algorithm="HS256").decode('utf-8')
     return token
 
 
@@ -38,6 +39,6 @@ def token_validation(username, password):
         'username': username,
         'password': password
     }
-    r = requests.post(settings.AUTH_ENDPOINT, data=data)
-    token = r.json()['access']
+    tokson = requests.post(AUTH_ENDPOINT, data=data)
+    token = tokson.json()['access']
     return token

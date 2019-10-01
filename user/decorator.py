@@ -14,7 +14,7 @@ def login_decorator(function):
     :param function: function is called
     :return: will check token expiration
     """
-    permission_classes = (IsAuthenticated,)
+    # permission_classes = (IsAuthenticated,)
 
     def wrapper(request,*args, **kwargs):
         """

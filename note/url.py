@@ -10,6 +10,8 @@ urlpatterns = [
 
     path("note/",views.Create.as_view()),
     path("note/<note_id>",views.Update.as_view()),
+    path("noteshare", views.NoteShare.as_view()),
+
 
 
 ]

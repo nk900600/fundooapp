@@ -11,7 +11,6 @@
 import jwt
 import requests
 from fundoo.settings import SECRET_KEY, AUTH_ENDPOINT
-# import fundoo.settings as settings
 
 
 def token_activation(username, password):

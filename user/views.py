@@ -10,6 +10,8 @@
 
 import json
 from smtplib import SMTPAuthenticationError
+
+import django
 import jwt
 from django.conf import settings
 from django.contrib import messages
@@ -19,14 +21,18 @@ from django.core.mail import EmailMessage
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.template.loader import render_to_string
+from django.views.decorators.clickjacking import xframe_options_deny
+from django.views.decorators.csrf import csrf_protect
 from jwt import ExpiredSignatureError
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import GenericAPIView
+
+from services.redis import Redis
 from services.token import token_activation, token_validation
 from .serializer import RegistrationSerializer, UserSerializer, LoginSerializer, ResetSerializer, EmailSerializer
 from django.core.validators import validate_email
-
-
+from django_short_url.views import get_surl
+from django_short_url.models import ShortURL
 
 
 def home(request):
@@ -47,6 +53,7 @@ class Registrations(GenericAPIView):
     def get(self, request):
         return render(request, 'user/registration.html')
 
+    # @csrf_protect  'Login' object has no attribute 'COOKIES'
     def post(self, request):
 
         username = request.data['username']
@@ -62,51 +69,50 @@ class Registrations(GenericAPIView):
         try:
             validate_email(email)
         except Exception:
-            return HttpResponse(json.dumps("please enter vaild email address"))
+            smd['message'] = "please enter vaild email address"
+            return HttpResponse(json.dumps(smd))
+
         # user input is checked
         if username == "" or email == "" or password == "":
-            HttpResponse(json.dumps(smd))
-
-        # if user exists it will show error message
-        elif User.objects.filter(username=username).exists():
-            HttpResponse(json.dumps(smd))
+            smd['message'] = "one of the details missing"
+            return HttpResponse(json.dumps(smd))
 
         # if email exists it will show error message
         elif User.objects.filter(email=email).exists():
-            HttpResponse(json.dumps(smd))
+            smd['message'] = "email address is already registered "
+            return HttpResponse(json.dumps(smd))
 
         else:
-            userCreated = User.objects.create_user(username=username, email=email, password=password,
-                                                   is_active=False)
-            userCreated.save()
+            try:
+                user_created = User.objects.create_user(username=username, email=email, password=password,
+                                                        is_active=False)
+                user_created.save()
 
-            # user is unique then we will send token to his/her email for validation
-            if userCreated is not None:
+                # user is unique then we will send token to his/her email for validation
+                if user_created is not None:
+                    token = token_activation(username, password)
+                    url = str(token)
+                    surl = get_surl(url)
+                    z = surl.split("/")
 
-                token = token_activation(username, password)
-                mail_subject = "Activate your account by clicking below link"
-                mail_message = render_to_string('user/activatetoken.html', {
-                    'user': userCreated.username,
-                    'domain': get_current_site(request).domain,
-                    'token': token
-                })
-                recipient_email = userCreated.email
-                email = EmailMessage(mail_subject, mail_message, to=[recipient_email])
-                try:
-                    # email is sent from here with the url link
+                    mail_subject = "Activate your account by clicking below link"
+                    mail_message = render_to_string('user/activatetoken.html', {
+                        'user': user_created.username,
+                        'domain': get_current_site(request).domain,
+                        'surl': z[2]
+                    })
+                    recipient_email = user_created.email
+                    email = EmailMessage(mail_subject, mail_message, to=[recipient_email])
                     email.send()
-                except SMTPAuthenticationError:
                     smd = {
                         'success': True,
                         'message': 'please check the mail and click on the link  for validation',
                         'data': [token],
                     }
                     return HttpResponse(json.dumps(smd))
-                smd = {
-                        'success': True,
-                        'message': 'please check the mail and click on the link  for validation',
-                        'data': [token],
-                    } 
+            except Exception:
+                smd["success"]=False
+                smd["message"]="username already taken"
                 return HttpResponse(json.dumps(smd))
 
 
@@ -120,8 +126,12 @@ class Login(GenericAPIView):
     def get(self, request):
         return render(request, 'user/login.html')
 
+    @xframe_options_deny
+    # @csrf_protect
     def post(self, request):
 
+        user = request.user
+        print(user.username)
         username = request.data['username']
         password = request.data['password']
         smd = {
@@ -131,53 +141,47 @@ class Login(GenericAPIView):
         }
         # validation is done
         if username == "" or password == "":
-            HttpResponse(json.dumps(smd))
+            smd['message'] = 'one or more fields is empty'
+            return HttpResponse(json.dumps(smd))
+
         user = auth.authenticate(username=username, password=password)
         # if user is not none then we will generate token
         if user is not None:
+
             token = token_validation(username, password)
+            red = Redis()
+            red.set(user.username, token)
             smd = {
                 'success': True,
                 'message': "successfully logged",
                 'data': [token],
             }
+
             return HttpResponse(json.dumps(smd))
-            # return redirect('/logout')
+
         else:
+            smd['message'] = 'invaild credentials'
             return HttpResponse(json.dumps(smd))
-
-
-# class Hello(GenericAPIView):
-#     permission_classes = (IsAuthenticated,)
-
-#     def get(self, request):
-#         return Response(json.dumps("hi"))
 
 
 class Logout(GenericAPIView):
-    # permission_classes = (IsAuthenticated,)
+    serializer_class = LoginSerializer
 
     def get(self, request):
         """
         :param request: logout request is made
         :return: we will delete the token which was stored in redis
         """
-        # Authorization
-        # print(request.META['HTTP_AUTHORIZATION'])
-        print('hello')
-        # return Response(json.dumps("hi"))
-        return render(request,"user/logout.html")
+        smd = {"success": False, "message": "not a vaild user", "data": []}
+        try:
 
-    def post(self, request):
-        """
-        :param request: logout request is made
-        :return: we will delete the token which was stored in redis
-        """
-        # Authorization
-        # print(request.META['HTTP_AUTHORIZATION'])
-        print('hello')
-        return HttpResponse(json.dumps("hi"))
-        # return render(request, "user/logout.html")
+            user = request.user
+            red = Redis()
+            red.delete(user.username)
+            smd = {"success": True, "message": " logged out", "data": []}
+            return HttpResponse(json.dumps(smd))
+        except Exception:
+            return HttpResponse(json.dumps(smd))
 
 
 class ForgotPassword(GenericAPIView):
@@ -187,10 +191,11 @@ class ForgotPassword(GenericAPIView):
     """
     serializer_class = EmailSerializer
 
-    def get(self,request):
+    def get(self, request):
         return HttpResponse(json.dumps("hi"))
 
-    def post(self,request):
+    # @csrf_protect
+    def post(self, request):
 
         email = request.data["email"]
         smd = {
@@ -200,30 +205,31 @@ class ForgotPassword(GenericAPIView):
         }
         # email validation is done here
         if email == "":
+            smd['message'] = 'email field is empty please provide vaild input'
             return HttpResponse(json.dumps(smd))
         else:
-            try:
-                # i = 1
-                # if i == 1:
-                #     raise ValueError('my exception')
-                try:
-                    validate_email(email)
-                except Exception:
-                    HttpResponse(json.dumps(smd))
 
-            
+            try:
+                validate_email(email)
+            except Exception:
+                return HttpResponse(json.dumps(smd))
+            try:
+
                 user = User.objects.get(email=email)
 
                 #  here user is not none then token is generated
                 if user is not None:
+                    token = token_activation(user.username, user.id)
+                    url = str(token)
+                    surl = get_surl(url)
+                    z = surl.split("/")
 
-                    token = token_activation(user.username,user.id)
                     # email is generated  where it is sent the email address entered in the form
                     mail_subject = "Activate your account by clicking below link"
                     mail_message = render_to_string('user/reset_password_token_link.html', {
                         'user': user.username,
                         'domain': get_current_site(request).domain,
-                        'token': token
+                        'surl': z[2]
                     })
                     recipientemail = user.email
                     email = EmailMessage(mail_subject, mail_message, to=[recipientemail])
@@ -240,13 +246,11 @@ class ForgotPassword(GenericAPIView):
                 #     return HttpResponse(json.dumps(smd))
             except Exception as e:
                 print(e)
-                smd['message']= "not a registered user ",
+                smd['message'] = "not a registered user",
                 return HttpResponse(json.dumps(smd))
 
 
-
-
-def activate(request, token):
+def activate(request, surl):
     """
     :param request: request is made by the used
     :param token:  token is fetched from url
@@ -255,6 +259,8 @@ def activate(request, token):
     try:
         # decode is done for the JWT token where username is fetched
 
+        tokenobject = ShortURL.objects.get(surl=surl)
+        token = tokenobject.lurl
         decode = jwt.decode(token, settings.SECRET_KEY)
         username = decode['username']
         user = User.objects.get(username=username)
@@ -276,14 +282,17 @@ def activate(request, token):
         return redirect('/registration')
 
 
-def reset_password(request, token):
+def reset_password(request, surl):
     """
+    :param surl:  token is again send to the user
     :param request:  user will request for resetting password
-    :param token: token is again send to the user
     :return: will reset the password
     """
     try:
         # here decode is done with jwt
+
+        tokenobject = ShortURL.objects.get(surl=surl)
+        token = tokenobject.lurl
         decode = jwt.decode(token, settings.SECRET_KEY)
         username = decode['username']
         user = User.objects.get(username=username)
@@ -292,16 +301,16 @@ def reset_password(request, token):
         if user is not None:
             context = {'userReset': user.username}
             print(context)
-            return redirect('/login/forgotpassword/resetpassword/' + str(user))
+            return redirect('/resetpassword/' + str(user))
         else:
             messages.info(request, 'was not able to sent the email')
-            return redirect('login/forgotpassword')
+            return redirect('/forgotpassword')
     except KeyError:
         messages.info(request, 'was not able to sent the email')
-        return redirect('login/forgotpassword')
+        return redirect('/forgotpassword')
     except Exception:
         messages.info(request, 'activation link expired')
-        return redirect('login/forgotpassword')
+        return redirect('/forgotpassword')
 
 
 class ResetPassword(GenericAPIView):
@@ -312,35 +321,33 @@ class ResetPassword(GenericAPIView):
     """
     serializer_class = ResetSerializer
 
-    def get(self, request, user_reset):
-        try:
-            User.objects.get(id=user_reset)
-            return HttpResponse(json.dumps("hey user"))
-        except Exception:
-            return HttpResponse(json.dumps("not a vaild url"))
-
+    # @csrf_protect
     def post(self, request, user_reset):
 
         password1 = request.data['password']
-        # password2 = request.data['password']
+        password2 = request.data['password']
 
         smd = {
             'success': False,
             'message': 'password reset not done',
             'data': [],
         }
-        try:
-            # password validation is done in this form
-            if password1 == "" or password2 == "":
-                return HttpResponse(json.dumps(smd))
+        # password validation is done in this form
+        if user_reset is None:
+            smd['message'] = 'not a vaild user'
+            return HttpResponse(json.dumps(smd))
 
-            elif password2 != password1:
-                return HttpResponse(json.dumps(smd))
+        elif password1 == "" or password2 == "":
+            smd['message'] = 'one of the fields are empty'
+            return HttpResponse(json.dumps(smd))
 
-            elif user_reset is None:
-                return HttpResponse(json.dumps(smd))
+        elif len(password1) <= 4 or len(password2) <= 4:
+            smd['message'] = 'password should be 4 or  more than 4 character'
+            return HttpResponse(json.dumps(smd))
 
-            else:
+        else:
+            try:
+
                 user = User.objects.get(username=user_reset)
                 user.set_password(password1)
                 # here we will save the user password in the database
@@ -352,8 +359,9 @@ class ResetPassword(GenericAPIView):
                     'data': [],
                 }
                 return HttpResponse(json.dumps(smd))
-        except Exception:
-            return HttpResponse(json.dumps(smd))
+            except django.contrib.auth.models.User.DoesNotExist:
+                smd['message'] = 'not a vaild user '
+                return HttpResponse(json.dumps(smd))
 
 
 def session(request):

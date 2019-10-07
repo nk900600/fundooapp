@@ -32,7 +32,4 @@ def upload_file(file_name, object_name=None):
         logging.error(error)
         return False
     return response
-#
-# s3_client = boto3.client('s3')
-# s3_client.upload_file('/home/admin1/PycharmProjects/fundooapp/hello',
-# 'django-s3-files', 'fidefdrstdcvdtupload')
+

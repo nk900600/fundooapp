@@ -1,10 +1,37 @@
-[
-  {
-    "name": "nikhil",
+[{
+  "test1":{
+    "username": "nk90600",
+    "email": "niksroad2success@gamilcom",
+    "password": "pankaj"
+
+},
+ "test2":{
+    "username": "",
+    "email": "",
+    "password": ""
+
+},
+   "test3":{
     "username": "nk90600",
     "email": "niksroad2successgamilcom",
-    "password1": "pankaj",
-    "password2": "pankaj"
+    "password": "pankaj"
+
+},
+   "test4":{
+    "username": "nk90600",
+    "password": "pankaj@007"
+
+},
+   "test5":{
+    "username": "",
+    "password": ""
+
+},
+   "test6":{
+    "username": "nkq",
+    "password": "pankaj"
+
+}
 }
 
 ]

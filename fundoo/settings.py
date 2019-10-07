@@ -48,11 +48,14 @@ INSTALLED_APPS = [
     'storages',
     'rest_framework',
     'corsheaders',
+    'django_short_url',
+
 
 
 ]
 
-
+DB = 0
+PORT = 6379
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
@@ -61,11 +64,11 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.BrokenLinkEmailsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',  # <--
+
 
 ]
 
@@ -87,22 +90,13 @@ TEMPLATES = [
 
                 'social_django.context_processors.backends',  # <--
                 'social_django.context_processors.login_redirect',  # <--
+
             ],
         },
     },
 ]
 
 WSGI_APPLICATION = 'fundoo.wsgi.application'
-
-# Database
-# https://docs.djangoproject.com/en/2.2/ref/settings/#databases
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
-#     }
-# }
 
 AUTHENTICATION_BACKENDS = (
     'social_core.backends.github.GithubOAuth2',
@@ -118,16 +112,14 @@ LOGOUT_URL = 'logout/'
 LOGIN_REDIRECT_URL = '/note'
 
 url = 'https://django-s3-files.s3.us-east-2.amazonaws.com/'
-
-
+BASE_URL = os.getenv('BASE_URL')
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+        # 'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
     ),
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
-#     'DEFAULT_PERMISSION_CLASSES': {'rest_framework.permissions.IsAdminUser'
-#
-# }
+
 }
 DATABASES = {
     'default': {
@@ -139,8 +131,6 @@ DATABASES = {
         'PORT': '',
     }
 }
-# Password validation
-# https://docs.djangoproject.com/en/2.2/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
     {
@@ -176,21 +166,20 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 EMAIL_PORT = os.getenv('EMAIL_PORT')
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/2.2/howto/static-files/
-
 STATIC_URL = '/static/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+MEDIA_URL = '/media/'
 
-# REST_FRAMEWORKS = {
-#     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
-#     'DEFAULT_AUTHENTICATION_CLASSES': (
-#         'rest_framework_simplejwt.authentication.JSONWebTokenAuthentication',
-#     ),
+REST_FRAMEWORKS = {
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JSONWebTokenAuthentication',
+    ),
 
-# 'DEFAULT_PERMISSION_CLASSES': [
-#     'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
-# ],
-# }
+    # 'DEFAULT_PERMISSION_CLASSES': [
+    #     'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    # ],
+}
 
 SWAGGER_SETTINGS = {
     'SECURITY_DEFINITIONS': {
@@ -227,10 +216,30 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_LIFETIME': datetime.timedelta(days=1),
 }
 
+SOCIAL_AUTH_GITHUB_KEY = os.getenv("SOCIAL_AUTH_GITHUB_KEY")
+SOCIAL_AUTH_GITHUB_SECRET = os.getenv("SOCIAL_AUTH_GITHUB_SECRET")
 
-SOCIAL_AUTH_GITHUB_KEY = 'c6e48902def5368d9c32'
-SOCIAL_AUTH_GITHUB_SECRET = 'f1ba48b7f2e815d9255d46f71c87228eada2589e'
+SOCIAL_AUTH_FACEBOOK_KEY = os.getenv("SOCIAL_AUTH_FACEBOOK_KEY")  # App ID
+SOCIAL_AUTH_FACEBOOK_SECRET = os.getenv("SOCIAL_AUTH_FACEBOOK_SECRET")  # App Secret
 
+AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME')
+AWS_S3_FILE_OVERWRITE = False
+AWS_DEFAULT_ACL = None
+DEFAULT_FILE_STORAGE = os.getenv('DEFAULT_FILE_STORAGE')
 
-SOCIAL_AUTH_FACEBOOK_KEY = '371457487066750'  # App ID
-SOCIAL_AUTH_FACEBOOK_SECRET = '6e7b5a0f08529a973d56f1d67da6b4f2'  # App Secret
+SOCIAL_AUTH_FACEBOOK_SCOPE = ['email', 'user_link']  # add this
+# SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {  # add this
+#     'fields': 'id, name, email, picture.type(large), link'
+# }
+# SOCIAL_AUTH_FACEBOOK_EXTRA_DATA = [  # add this
+#     ('name', 'name'),
+#     ('email', 'email'),
+#     ('picture', 'picture'),
+#     ('link', 'profile_url'),
+# ]
+SOCIAL_AUTH_GITHUB_SCOPE = ['email', 'name', 'user_link']
+SOCIAL_AUTH_GITHUB_PROFILE_EXTRA_PARAMS = {  # add this
+    'fields': 'id, name, email, link'
+}

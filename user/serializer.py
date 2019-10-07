@@ -1,7 +1,7 @@
 """
 thsi file is used for serilizing the existing models
 """
-# from django.core import serializers
+
 from django.contrib.auth.models import User
 from rest_framework import serializers
 from .models import Registration

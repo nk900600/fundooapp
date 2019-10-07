@@ -1,4 +1,4 @@
-# from django.core import serializers
+
 
 from rest_framework import serializers
 from .models import Notes, Lable
@@ -7,14 +7,13 @@ from .models import Notes, Lable
 class NotesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notes
-        # fields = '__all__'
-        fields = ['title', 'note', 'label',  'archive', 'checkbox', 'pin',]
+        fields = ['title', 'note','image']
 
 
-# class LabelSerializer(serializers.ModelSerializer):
-#     class Meta:
-#         model = LableColabrator
-#         fields = 'lable'
+class ShareSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notes
+        fields = ['title', 'note']
 
 
 class UpdateSerializer(serializers.ModelSerializer):

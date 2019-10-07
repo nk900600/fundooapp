@@ -9,33 +9,64 @@
 """
 
 import json
+from urllib.parse import quote
 from django.core.validators import validate_email
 from django.db import IntegrityError
 from django.http import HttpResponse
+from django.shortcuts import render, redirect
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.generics import GenericAPIView
 from django.contrib.auth.models import User
 from fundoo import settings
 from services.amazones3 import upload_file
+from services.decorators import login_decorator
 from .models import Notes, Lable
-from note.serialized import NotesSerializer, UpdateSerializer
+from note.serialized import NotesSerializer, UpdateSerializer, ShareSerializer
 
 
 
 class Create(GenericAPIView):
     serializer_class = NotesSerializer
 
-    def get(self, request):
-        """
-       :param request:  request from user
-       :param args:
-       :param kwargs:
-       :return:  will render html page
-       """
-        notes = Notes.objects.all()
-        note_ser = NotesSerializer(notes, many=True)
 
-        return Response(note_ser.data)
+    @staticmethod
+    @login_decorator
+    def post(request):
+        """
+        :param request:  request from user
+        :param args:
+        :param kwargs:
+        :return:  will save note details posted by user
+        """
+        smd = {'success': False, 'message': 'not a vaild note ', 'data': []}
+        try:
+
+            note = request.data['note']
+            # images = request.data['image']
+            user = request.user
+            print(user)
+
+            if note == "":
+                return HttpResponse(json.dumps(smd))
+            else:
+                # upload_file(str(images), str(user) + str(images))
+                # image_url = settings.url + str(user) + str(images)
+                # users = User.objects.filter(email__in=colaborator)   #colabartor
+                user = User.objects.get(pk=1)
+                note_create = Notes(user_id=user.id, note=note)
+
+                note_create.save()
+                smd["success"] = True
+                smd['message'] = 'note saved'
+
+                return HttpResponse(json.dumps(smd))
+        except (IntegrityError, Exception):
+            return HttpResponse(json.dumps(smd))
+
+
+class NoteShare(GenericAPIView):
+    serializer_class = ShareSerializer
 
     def post(self, request):
         """
@@ -46,57 +77,19 @@ class Create(GenericAPIView):
         """
         smd = {'success': False, 'message': 'not a vaild note ', 'data': []}
         try:
-        #     data = NotesSerializer(request.data)
-        #     if data.is_valid():
-        #         data.save()
-        #         return HttpResponse(data.data)
-        #     else:
-        #         return HttpResponse(data.error_messages)
-        # except Exception:
-        #     return HttpResponse(data.error_messages)
-
-
-
-            # user = request.data['user']
             title = request.data['title']
             note = request.data['note']
-            label = request.data['label']
-            # colaborator = request.data['colaborator']
-            # archive = request.data['archive']
-            checkbox = request.data['checkbox']
-            pin = request.data['pin']
-            # images = request.data['image']
-
-            # validate_email(colaborator)
 
             if note == "":
                 return HttpResponse(json.dumps(smd))
             else:
-                # upload_file(str(images), str(user) + str(images))
-                # image_url = settings.url + str(user) + str(images)
-                #  users = User.objects.filter(email__in=colaborator)   #colabartor
-                print(">>>>>>>>>>>")
                 user = User.objects.get(pk=1)
-
-                note_create = Notes(user_id=user.id, title=title, note=note,
-                                    checkbox=checkbox, pin=pin, )
-                print("ffffffffff")
+                note_create = Notes(user_id=user.id, note=note, title=title)
 
                 note_create.save()
-                lab = Lable.objects.create(name=label)
-                note_create.label.add(lab)
-                print(">>>>>>>>DSFfffffFFFFFFFFFf")
-                # label = Lable.objects.filter(name=label)
-                #
-                # if label is None :
-                #     l = Lable.objects.create(name=label)
-                #     l.save()
-
-
-                smd["success"] = True
-                smd['message'] = 'note saved'
-                return HttpResponse(json.dumps(smd))
-        except (IntegrityError):
+                return redirect(
+                    "https://twitter.com/intent/tweet?source=webclient&text=" + str(title) + "\n" + str(note))
+        except (IntegrityError, Exception):
             return HttpResponse(json.dumps(smd))
 
 
@@ -136,11 +129,11 @@ class Update(GenericAPIView):
 
             if note == "":
                 HttpResponse(json.dumps(smd))
-            elif delete == True:
+            elif delete:
                 Notes.objects.flter(id=note_id).delete()
                 smd = {'success': True, 'message': 'note is deleted ', 'data': []}
                 HttpResponse(json.dumps(smd))
-            elif copy == True:
+            elif copy:
                 new = Notes.objects.get(id=note_id)
                 new.pk = None
                 new.save()
@@ -151,8 +144,9 @@ class Update(GenericAPIView):
                 upload_file(str(images), str(user) + str(images))
                 image_url = settings.url + str(user) + str(images)
 
-                note_update = Notes.objects.filter(id=note_id).update(user_id=user, title=title, note=note, image=image_url,
-                                                   archive=archive, checkbox=checkbox, pin=pin)
+                note_update = Notes.objects.filter(id=note_id).update(user_id=user, title=title, note=note,
+                                                                      image=image_url,
+                                                                      archive=archive, checkbox=checkbox, pin=pin)
                 note_update.save()
                 label = Lable.objects.filter(name=label)
 
@@ -165,7 +159,6 @@ class Update(GenericAPIView):
                 return HttpResponse(json.dumps(smd))
         except (IntegrityError, TypeError, Exception):
             return HttpResponse(json.dumps(smd))
-
 
 # class Archive(GenericAPIView):
 

@@ -1,15 +1,34 @@
+"""
+ ******************************************************************************
+ *  Purpose: purpose is to do load testing
+ *
+ *  @author  Nikhil Kumar
+ *  @version 3.7
+ *  @since   30/09/2019
+ ******************************************************************************
+"""
+
 from locust import HttpLocust, TaskSet
 
 
 def login(user):
+    """
+    :param user: login function is created
+    """
     user.client.post("/login/", {"username": "admin", "password": "admin"})
 
 
 def index(user):
+    """
+    :param user: index function is created
+    """
     user.client.get("/")
 
 
 def note(user):
+    """
+    :param user: note function is created
+    """
     user.client.post("/note/", {"title": "hi", "note": ""})
 
 

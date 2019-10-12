@@ -21,7 +21,6 @@ def login_decorator(function):
 
             if request.COOKIES.get(settings.SESSION_COOKIE_NAME):
                 user = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
-                print(user)
                 if user:
                     return function(request)
                 else:

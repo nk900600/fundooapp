@@ -44,13 +44,21 @@ INSTALLED_APPS = [
     'rest_framework_swagger',
     'user',
     'note',
+    'oauth2_provider',
     'social_django',
+    'rest_framework_social_oauth2',
     'storages',
     'rest_framework',
     'corsheaders',
     'django_short_url',
 
-
+    # 'django.contrib.sites',
+    #
+    # 'allauth',
+    # 'allauth.account',
+    # 'allauth.socialaccount',
+    #
+    # 'allauth.socialaccount.providers.github',
 
 ]
 
@@ -68,6 +76,7 @@ MIDDLEWARE = [
     'django.middleware.common.BrokenLinkEmailsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',  # <--
+
 
 
 ]
@@ -90,12 +99,16 @@ TEMPLATES = [
 
                 'social_django.context_processors.backends',  # <--
                 'social_django.context_processors.login_redirect',  # <--
+                # 'django.contrib.auth.backends.ModelBackend',
+                #
+                # # `allauth` specific authentication methods, such as login by e-mail
+                # 'allauth.account.auth_backends.AuthenticationBackend',
 
             ],
         },
     },
 ]
-
+SITE_ID = 1
 WSGI_APPLICATION = 'fundoo.wsgi.application'
 
 AUTHENTICATION_BACKENDS = (
@@ -110,8 +123,8 @@ AUTHENTICATION_BACKENDS = (
 LOGIN_URL = 'login/'
 LOGOUT_URL = 'logout/'
 LOGIN_REDIRECT_URL = '/note'
-
-url = 'https://django-s3-files.s3.us-east-2.amazonaws.com/'
+SOCIALACCOUNT_QUERY_EMAIL=True
+EMAIL_BACKENDS = 'django.core.main.backends.console.EmailBackends'
 BASE_URL = os.getenv('BASE_URL')
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
@@ -124,11 +137,12 @@ REST_FRAMEWORK = {
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'fundoo',
+        'NAME': 'fundoo_new',
         'USER': 'myprojectuser',
         'PASSWORD': 'Admin@123',
         'HOST': 'localhost',  # Or an IP Address that your DB is hosted on
         'PORT': '',
+
     }
 }
 
@@ -146,6 +160,7 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
@@ -174,6 +189,8 @@ REST_FRAMEWORKS = {
     'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JSONWebTokenAuthentication',
+        'oauth2_provider.contrib.rest_framework.OAuth2Authentication',
+        'rest_framework_social_oauth2.authentication.SocialAuthentication',
     ),
 
     # 'DEFAULT_PERMISSION_CLASSES': [
@@ -215,12 +232,15 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_LIFETIME': datetime.timedelta(minutes=5),
     'SLIDING_TOKEN_REFRESH_LIFETIME': datetime.timedelta(days=1),
 }
-
+SOCIAL_AUTH__EMAIL_REQUIRED=True
 SOCIAL_AUTH_GITHUB_KEY = os.getenv("SOCIAL_AUTH_GITHUB_KEY")
 SOCIAL_AUTH_GITHUB_SECRET = os.getenv("SOCIAL_AUTH_GITHUB_SECRET")
 
 SOCIAL_AUTH_FACEBOOK_KEY = os.getenv("SOCIAL_AUTH_FACEBOOK_KEY")  # App ID
 SOCIAL_AUTH_FACEBOOK_SECRET = os.getenv("SOCIAL_AUTH_FACEBOOK_SECRET")  # App Secret
+
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY=os.getenv('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
 
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
@@ -230,16 +250,18 @@ AWS_DEFAULT_ACL = None
 DEFAULT_FILE_STORAGE = os.getenv('DEFAULT_FILE_STORAGE')
 
 SOCIAL_AUTH_FACEBOOK_SCOPE = ['email', 'user_link']  # add this
-# SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {  # add this
-#     'fields': 'id, name, email, picture.type(large), link'
-# }
+SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {  # add this
+    'fields': 'id, name, email, picture.type(large), link'
+}
+from social_core.backends.github import GithubOAuth2
 # SOCIAL_AUTH_FACEBOOK_EXTRA_DATA = [  # add this
 #     ('name', 'name'),
 #     ('email', 'email'),
 #     ('picture', 'picture'),
 #     ('link', 'profile_url'),
 # ]
-SOCIAL_AUTH_GITHUB_SCOPE = ['email', 'name', 'user_link']
+SOCIAL_AUTH_GITHUB_SCOPE = ['user:email']
 SOCIAL_AUTH_GITHUB_PROFILE_EXTRA_PARAMS = {  # add this
     'fields': 'id, name, email, link'
 }
+

@@ -1,14 +1,13 @@
 
 
 from rest_framework import serializers
-from .models import Notes, Lable
+from .models import Notes, Label
 
 
 class NotesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notes
-        fields = ['title', 'note','image']
-
+        fields = ['user','title', 'note', 'label', 'url', 'archive', 'coll', 'image']
 
 class ShareSerializer(serializers.ModelSerializer):
     class Meta:
@@ -16,8 +15,21 @@ class ShareSerializer(serializers.ModelSerializer):
         fields = ['title', 'note']
 
 
+class LabelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Label
+        fields = ['name']
+
+
+class LabelupdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Label
+        fields = ['name']
+
+
+
+
 class UpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notes
-        fields = ['user', 'title', 'note', 'label', 'colaborator', 'archive', 'checkbox', 'pin', 'image',
-                  'delete_note', 'copy']
+        fields = ['title', 'note', 'label', 'coll', 'archive', 'checkbox', 'pin','copy']

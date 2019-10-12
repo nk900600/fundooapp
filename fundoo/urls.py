@@ -26,4 +26,5 @@ urlpatterns = [
     url('fundoo/',schema_view, name="swagger"),
     url(r'^oauth/', include('social_django.urls', namespace='social')),  # <--
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),
+    # url(r'^accounts/', include('allauth.urls')),
 ]

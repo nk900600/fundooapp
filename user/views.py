@@ -29,6 +29,7 @@ from rest_framework.generics import GenericAPIView
 
 from services.redis import Redis
 from services.token import token_activation, token_validation
+
 from .serializer import RegistrationSerializer, UserSerializer, LoginSerializer, ResetSerializer, EmailSerializer
 from django.core.validators import validate_email
 from django_short_url.views import get_surl
@@ -149,6 +150,7 @@ class Login(GenericAPIView):
         if user is not None:
 
             token = token_validation(username, password)
+
             red = Redis()
             red.set(user.username, token)
             smd = {
@@ -197,6 +199,7 @@ class ForgotPassword(GenericAPIView):
     # @csrf_protect
     def post(self, request):
 
+        global response
         email = request.data["email"]
         smd = {
             'success': False,
@@ -204,51 +207,55 @@ class ForgotPassword(GenericAPIView):
             'data': []
         }
         # email validation is done here
-        if email == "":
-            smd['message'] = 'email field is empty please provide vaild input'
-            return HttpResponse(json.dumps(smd))
-        else:
+        try:
+            if email == "":
+                response ='email field is empty please provide vaild input'
+                # return HttpResponse(json.dumps(smd))
+            else:
 
-            try:
-                validate_email(email)
-            except Exception:
-                return HttpResponse(json.dumps(smd))
-            try:
-
-                user = User.objects.get(email=email)
-
-                #  here user is not none then token is generated
-                if user is not None:
-                    token = token_activation(user.username, user.id)
-                    url = str(token)
-                    surl = get_surl(url)
-                    z = surl.split("/")
-
-                    # email is generated  where it is sent the email address entered in the form
-                    mail_subject = "Activate your account by clicking below link"
-                    mail_message = render_to_string('user/reset_password_token_link.html', {
-                        'user': user.username,
-                        'domain': get_current_site(request).domain,
-                        'surl': z[2]
-                    })
-                    recipientemail = user.email
-                    email = EmailMessage(mail_subject, mail_message, to=[recipientemail])
-                    email.send()
-
-                    smd = {
-                        'success': True,
-                        'message': "check email for vaildation ",
-                        'data': []
-                    }
-                    # here email is sent to user
+                try:
+                    validate_email(email)
+                except Exception:
                     return HttpResponse(json.dumps(smd))
-                # else:
-                #     return HttpResponse(json.dumps(smd))
-            except Exception as e:
-                print(e)
-                smd['message'] = "not a registered user",
-                return HttpResponse(json.dumps(smd))
+                try:
 
+                    user = User.objects.get(email=email)
+
+                    #  here user is not none then token is generated
+                    if user is not None:
+                        token = token_activation(user.username, user.id)
+                        url = str(token)
+                        surl = get_surl(url)
+                        z = surl.split("/")
+
+                        # email is generated  where it is sent the email address entered in the form
+                        mail_subject = "Activate your account by clicking below link"
+                        mail_message = render_to_string('user/reset_password_token_link.html', {
+                            'user': user.username,
+                            'domain': get_current_site(request).domain,
+                            'surl': z[2]
+                        })
+                        recipientemail = user.email
+                        email = EmailMessage(mail_subject, mail_message, to=[recipientemail])
+                        email.send()
+
+                        response = {
+                            'success': True,
+                            'message': "check email for vaildation ",
+                            'data': []
+                        }
+                        # here email is sent to user
+                        # return HttpResponse(json.dumps(smd))
+                    # else:
+                    #     return HttpResponse(json.dumps(smd))
+                except Exception as e:
+                    print(e)
+                    response =smd['message'] = "not a registered user",
+                    # return HttpResponse(json.dumps(smd))
+        except Exception:
+            response = "dff"
+
+        return HttpResponse(json.dumps(response))
 
 def activate(request, surl):
     """

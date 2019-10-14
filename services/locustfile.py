@@ -25,6 +25,13 @@ def index(user):
     user.client.get("/")
 
 
+def forget(user):
+    """
+      :param user: index function is created
+      """
+    user.client.post("/forgotpassword/", {"email": "nk90600@gmail.com"})
+
+
 def note(user):
     """
     :param user: note function is created
@@ -33,7 +40,7 @@ def note(user):
 
 
 class UserBehavior(TaskSet):
-    tasks = {index: 2, note: 1}
+    tasks = {index: 2, note: 1, forget: 5}
 
     def on_start(self):
         login(self)

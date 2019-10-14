@@ -12,7 +12,7 @@ def login_decorator(function):
     :param function: function is called
     :return: will check token expiration
     """
-    def wrapper(request):
+    def wrapper(request,*args,**kwargs):
         """
         :return: will check token expiration
         """
@@ -22,7 +22,7 @@ def login_decorator(function):
             if request.COOKIES.get(settings.SESSION_COOKIE_NAME):
                 user = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
                 if user:
-                    return function(request)
+                    return function(request,*args,**kwargs)
                 else:
                     return HttpResponse(json.dumps(smd))
             else:
@@ -32,10 +32,15 @@ def login_decorator(function):
                 user = User.objects.get(id=decode['user_id'])
                 red = Redis() # red object is created
                 red.get(user.username)
-                return function(request)
+                return function(request,*args,**kwargs)
 
-        except (Exception,TypeError):
-            return HttpResponse(json.dumps(smd))
+        except (TypeError, Exception):
+            if TypeError:
+                smd = {"success": False, "message": "note query does not match", 'data': []}
+                return HttpResponse(json.dumps(smd))
+            else:
+                return HttpResponse(json.dumps(smd))
+
     return wrapper
 
 

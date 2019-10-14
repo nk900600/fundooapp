@@ -15,5 +15,4 @@ urlpatterns = [
     path("label", views.LabelsCreate.as_view()),
 
 
-
 ]

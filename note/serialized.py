@@ -7,7 +7,8 @@ from .models import Notes, Label
 class NotesSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notes
-        fields = ['user','title', 'note', 'label', 'url', 'archive', 'coll', 'image']
+        fields = ['title', 'note', 'label', 'url', 'archive', 'coll', 'image']
+
 
 class ShareSerializer(serializers.ModelSerializer):
     class Meta:
@@ -26,10 +27,7 @@ class LabelupdateSerializer(serializers.ModelSerializer):
         model = Label
         fields = ['name']
 
-
-
-
 class UpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notes
-        fields = ['title', 'note', 'label', 'coll', 'archive', 'checkbox', 'pin','copy']
+        fields = ['title', 'note', 'label', 'url', 'archive', 'coll',"copy",'checkbox','pin']

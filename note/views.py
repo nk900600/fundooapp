@@ -8,96 +8,96 @@
  ******************************************************************************
 """
 
-
 import json
-from services.redis import Redis
+import logging
+from datetime import datetime, timedelta
+from functools import wraps
+import django
+from django.core import serializers
+from django.utils import timezone as tz
+from django.shortcuts import get_object_or_404
+import redis
+import pdb
+from django.contrib.auth.models import User
 from django.db import IntegrityError
-from django.http import HttpResponse, JsonResponse
-from django.shortcuts import render, redirect
+from django.http import HttpResponse
+from django.shortcuts import redirect
 from django.utils.decorators import method_decorator
 from rest_framework.generics import GenericAPIView
-from django.contrib.auth.models import User
-from services.amazones3 import upload_file
-from services.decorators import login_decorator
-from .models import Notes, Label
-from note.serialized import NotesSerializer, UpdateSerializer, ShareSerializer, LabelSerializer, LabelupdateSerializer
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser, FileUploadParser
+from rest_framework.response import Response
 
-redis = Redis()
+from fundoo.settings import PORT, DB, file_handler
+from note.serialized import NotesSerializer, UpdateSerializer, ShareSerializer, LabelSerializer, LabelupdateSerializer, \
+    ArchiveSerializer
+from lib.amazones3 import AmazoneS3
+from note.decorators import login_decorator, label_coll_validator_put, label_coll_validator_post
+from lib.redis import red
+# import logging
+from .models import Notes, Label
+from pymitter import EventEmitter
+ee = EventEmitter()
+
+s3 = AmazoneS3()
+#import django.core.files.uploadedfile as d
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.addHandler(file_handler)
 
 @method_decorator(login_decorator, name='dispatch')
 class Create(GenericAPIView):
     serializer_class = NotesSerializer
 
-    # def get(self, request):
-    #     """
-    #     :param request: request user data
-    #     :return: will print all the user data
-    #     """
-    #     user =request.user
-    #     note = Notes.objects.filter(user_id= user.id)
-    #     serialized_data = NotesSerializer(note, many=True)
-    #     return HttpResponse(json.dumps(serialized_data.data, indent=1))
-
-    def post(self, request):
+    # parser_classes = (FormParser,FileUploadParser)
+    @staticmethod
+    @label_coll_validator_post
+    def post(request):
         """
         :param request:  request from user
-        :param args:
-        :param kwargs:
         :return:  will save note details posted by user
         """
-
+        # data is taken from user
+        data = request.data
         user = request.user
+        data['user'] = user.id
+        coll_list = []  # empty coll  list is formed where data is input is converted to id
+        label_list = []  # empty label list is formed where data is input is converted to id
         try:
+            label = data["label"]
+            # for loop is used for the getting label input and coll input ids
+            for name in label:
+                lab_id = Label.objects.filter(user_id=1, name=name)
+                id = lab_id.values()[0]['id']
+                label_list.append(id)
+            data['label'] = label_list
+        except KeyError:
+            pass
+        try:
+            coll = data['coll']
+            # for loop is used for the getting label input and coll input ids
+            for email in coll:
+                email_id = User.objects.filter(email=email)
+                id = email_id.values()[0]['id']
+                coll_list.append(id)
+            data['coll'] = coll_list
+        except KeyError:
+            pass
 
-            title = request.data['title']
-            note = request.data['note']
-            label = request.data['label']
-            url = request.data['url']
-            archive = request.data['archive']
-            collaborators = request.data['coll']
-            try:
-                image = request.data["image"]
-            except (FileNotFoundError, Exception):
-                smd = {'success': False, 'message': 'not a valid image or path ', 'data': []}
-                return HttpResponse(json.dumps(smd))
+        serializer = NotesSerializer(data=data, partial=True)
 
-            if labelvalidator(label, user.id)[0]:
-                smd = {'success': False, 'message': 'label is not created by this user or user does not exist',
-                       'data': []}
-                return HttpResponse(json.dumps(smd))
-
-            if collvalidator(collaborators):
-                smd = {'success': False, 'message': 'email not vaild',
-                       'data': []}
-                return HttpResponse(json.dumps(smd))
-
-            if note == "":
-                smd = {'success': False, 'message': 'note is empty ', 'data': []}
-                return HttpResponse(json.dumps(smd))
-            else:
-                upload_file(str(image), "image/" + str(image))
-                note_create = Notes(user_id=user.id, title=title, note=note, url=url, checkbox=False,
-                                    copy=False, pin=False, delete_note=False, image=image, archive=archive)
-                note_create.save()
-                print(note_create.id)
-                for name in label:
-                    lab_id = Label.objects.get(name=name).id
-                    note_create.label.add(lab_id)
-                try:
-                    for email in collaborators:
-                        email_id = User.objects.filter(email=email)
-                        id = email_id.values()[0]['id']
-                        note_create.coll.add(id)
-                    note_data = Notes.objects.filter(id=note_create.id)
-
-                    redis.set(note_create.id, str(note_data.values()).encode('utf-8'))
-                    smd = {'success': True, 'message': 'note saved', 'data': []}
-                except IndexError:
-                    smd = {'success': False, 'message': 'not a vaild email address ', 'data': []}
-
-        except (IntegrityError, Exception):
-            smd = {'success': False, 'message': "some thing went wrong", 'data': []}
-        return HttpResponse(json.dumps(smd))
+        if serializer.is_valid():
+            note_create = serializer.save(user=user)
+            red.set(note_create.id, str(json.dumps(serializer.data)))  # created note is cached in redis
+            smd = {'success': True, 'message': "note created", 'data': []}
+            # logging.info("new note is created")
+            logger.info("note is created")
+            return HttpResponse(json.dumps(smd, indent=2), status=201)
+        smd = {'success': False, 'message': "note was not created", 'data': []}
+        print(serializer.error_messages)
+        # return HttpResponse(serializer.error_messages())
+        logger.error("note was not created")
+        return HttpResponse(json.dumps(smd, indent=2), status=400)
 
 
 @method_decorator(login_decorator, name='dispatch')
@@ -110,68 +110,63 @@ class Update(GenericAPIView):
         :param note_id:  note id
         :return: will fetch note id from database
         """
-        Notes.objects.get(id=note_id)
-        note = Notes.objects.filter(id=note_id)
-        serialized_data = NotesSerializer(note, many=True)
-        return HttpResponse(json.dumps(serialized_data.data, indent=1))
+        # pdb.set_trace()
+        get_object_or_404(Notes, id=note_id)
+        redis_data = red.get(str(note_id))
+        if redis_data is None:
+            note = Notes.objects.filter(id=note_id)
+            serialized_data = NotesSerializer(note, many=True)
+            logger.info("note was fetched from database")
+            return HttpResponse(json.dumps(serialized_data.data, indent=1))
+        logger.info("note was fetched form redis")
+        return HttpResponse(redis_data)
 
-    def put(self, request, note_id):
+    @staticmethod
+    @label_coll_validator_put
+    def put(request, note_id):
         """
         :param request:  data is requested
         :param note_id:  note id
         :return: will fetch note id from database
         """
-        smd = {'success': False, 'message': 'not a vaild note ', 'data': []}
-        user = request.user
 
+        instance = Notes.objects.get(id=note_id)
+        # data is fetched from user
+        data = request.data
+        coll_list = []  # empty coll  list is formed where data is input is converted to id
+        label_list = []  # empty label list is formed where data is input is converted to id
         try:
-            Notes.objects.get(id=note_id)
-            title = request.data['title']
-            note = request.data['note']
-            label = request.data['label']
-            collaborators = request.data['coll']
-            archive = request.data['archive']
-            checkbox = request.data['checkbox']
-            pin = request.data['pin']
-            copy = request.data["copy"]
-
-            if labelvalidator(label, user.id)[0]:
-                smd = {'success': False, 'message': 'label is not created by this user or user doesnot exist',
-                       'data': []}
-                return HttpResponse(json.dumps(smd))
-
-            if collvalidator(collaborators):
-                smd = {'success': False, 'message': 'email not vaild', 'data': []}
-                return HttpResponse(json.dumps(smd))
-
-            if note == "":
-                smd = {'success': False, 'message': 'note is empty ', 'data': []}
-                # return HttpResponse(json.dumps(smd))
-
-            elif copy:
-                new = Notes.objects.get(id=note_id)
-                new.pk = None
-                new.save()
-
-            else:
-
-                Notes.objects.filter(id=note_id).update(title=title, note=note, archive=archive, checkbox=checkbox,
-                                                        pin=pin)
-
-                update = Notes.objects.get(id=note_id)
-                for i in label:
-                    z = Label.objects.get(name=i).id
-                    update.label.add(z)
-                for i in collaborators:
-                    z = User.objects.get(email=i).id
-                    update.coll.add(z)
-
-                smd["success"] = True
-                smd['message'] = 'note saved'
-                return HttpResponse(json.dumps(smd))
-        except (IntegrityError, TypeError, Exception):
-            HttpResponse(json.dumps(smd))
-        return HttpResponse(json.dumps(smd))
+            label = data["label"]
+            # for loop is used for the getting label input and coll input ids
+            for name in label:
+                lab_id = Label.objects.filter(user_id=1, name=name)
+                id = lab_id.values()[0]['id']
+                label_list.append(id)
+            data['label'] = label_list
+        except KeyError:
+            logger.error("keyerror on label as label field was not given")
+            pass
+        try:
+            coll = data['coll']
+            # for loop is used for the getting label input and coll input ids
+            for email in coll:
+                email_id = User.objects.filter(email=email)
+                id = email_id.values()[0]['id']
+                coll_list.append(id)
+            data['coll'] = coll_list
+        except KeyError:
+            pass
+        serializer = NotesSerializer(instance, data=data, partial=True)
+        # here serialized data checked for validation and saved
+        if serializer.is_valid():
+            note_create = serializer.save()
+            red.set(note_create.id, str(json.dumps(serializer.data)))  # created note is cached in redis
+            logger.info("note was updated")
+            smd = {'success': True, 'message': "note created", 'data': []}
+            return HttpResponse(json.dumps(smd, indent=2), status=200)
+        logger.error("note was not updated")
+        smd = {'success': False, 'message': "note was not created", 'data': []}
+        return HttpResponse(json.dumps(smd, indent=2), status=400)
 
     def delete(self, request, note_id):
         """
@@ -181,12 +176,15 @@ class Update(GenericAPIView):
         """
         smd = {'success': False, 'message': 'not a vaild note ', 'data': []}
         try:
-            note = Notes.objects.get(id=note_id)
-            note.delete()
+            note = get_object_or_404(Notes, id=note_id)
+            note.delete_note = True
+            note.save()
+            logger.info("note was deleted")
             smd = {'success': True, 'message': 'note is deleted ', 'data': []}
-            return HttpResponse(json.dumps(smd))
+            return HttpResponse(json.dumps(smd, indent=2), status=201)
         except KeyError:
-            return HttpResponse(json.dumps(smd))
+            logger.error("note was not deleted")
+            return HttpResponse(json.dumps(smd, indent=2), status=400)
 
 
 @method_decorator(login_decorator, name='dispatch')
@@ -199,6 +197,7 @@ class LabelsCreate(GenericAPIView):
         :return: will get all lables created by user
         """
         user = request.user
+        print(user)
         labels = Label.objects.filter(user_id=user.id)
         lab = []
         for i in labels:
@@ -210,18 +209,17 @@ class LabelsCreate(GenericAPIView):
         :param request: request from user
         :return: will get all lables created by user
         """
-        smd = {"success": False, "message": "label with same name already exist", "data": []}
         user = request.user
         label = request.data["name"]
+        if Label.objects.filter(user_id=user.id, name=label).exists():
+            logger.warning("note is already exists")
+            smd = {"success": False, "message": "note is already exists", "data": label}
+            return HttpResponse(json.dumps(smd, indent=2), status=400)
 
-        # try:
-
-        newlabel = Label.objects.create(user_id=user.id, name=label)
-        newlabel.save()
+        Label.objects.create(user_id=user.id, name=label)
+        logger.info("note is created")
         smd = {"success": True, "message": "note is created", "data": label}
-        return HttpResponse(json.dumps(smd))
-        # except IntegrityError:
-        #     return HttpResponse(json.dumps(smd))
+        return HttpResponse(json.dumps(smd, indent=2), status=201)
 
 
 @method_decorator(login_decorator, name='dispatch')
@@ -234,13 +232,24 @@ class LabelsUpdate(GenericAPIView):
         :param name: name of the label
         :return: will update the data
         """
-        user = request.user
-        label = request.data["name"]
-        lab = Label.objects.get(name=name, user_id=user.id)
-        lab.name = label
-        lab.save()
-        smd = {"success": True, "message": "note is update", "data": [label]}
-        return HttpResponse(json.dumps(smd))
+        try:
+            # pdb.set_trace()
+            user = request.user
+            # label = request.data["name"]
+            # print(type(request.body))
+            res=json.loads(request.body)
+            label=res['name']
+            lab = get_object_or_404(Label, name=name, user_id=user.id)
+            lab.name = label
+            lab.save()
+            logger.info("label is update")
+            smd = {"success": True, "message": "label is update", "data": [label]}
+            return Response(smd, status=200)
+        except KeyError:
+            logger.warning("label does not exist")
+            smd = {"success": True, "message": "label does not exist", "data": []}
+            return Response(smd, status=400)
+
 
     def delete(self, request, name):
         """
@@ -251,17 +260,49 @@ class LabelsUpdate(GenericAPIView):
         user = request.user
         lab = Label.objects.get(name=name, user_id=user.id)
         lab.delete()
+        logger.info("note is deleted")
         smd = {"success": True, "message": "note is deleted", "data": []}
-        return HttpResponse(json.dumps(smd))
+        return HttpResponse(json.dumps(smd, indent=2),status=204)
 
 
-# class Pin(GenericAPIView):
+@method_decorator(login_decorator, name='dispatch')
+class Archive(GenericAPIView):
+    # serializer_class = ArchiveSerializer
 
-#     def get(self, request, user_id):
-#         pass
+    def get(self, request):
+        user = request.user
+        no = Notes.objects.filter(user_id=user.id, archive=True)
+        logger.info("archive data is loaded")
+        return HttpResponse(no.values(), status=200)
 
-#     def post(self, request, user_id):
-#         pass
+
+# @method_decorator(login_decorator, name='dispatch')
+class Trash(GenericAPIView):
+    # serializer_class = ArchiveSerializer
+
+    def get(self, request):
+        user = request.user
+        no = Notes.objects.filter(user_id=user.id, delete_note=True)
+        logger.info("Trash data is loaded")
+        return HttpResponse(no.values())
+
+
+@method_decorator(login_decorator, name='dispatch')
+class Reminders(GenericAPIView):
+
+    def get(self, request):
+        end_dt = tz.now() + tz.timedelta(days=10)  # you should tune the value
+        start_dt = tz.now()  #
+        user = request.user
+        try:
+            no = Notes.objects.filter(user_id=user.id, reminder__range=(start_dt, end_dt))
+            logger.info("Reminders data is loaded")
+            return HttpResponse(no.values(), status=200)
+        except TypeError:
+            logger.info("no reminder set")
+            smd = {"success": False, "message": "no reminder set", 'data': []}
+            return HttpResponse(json.dumps(smd), status=200)
+
 
 @method_decorator(login_decorator, name='dispatch')
 class NoteShare(GenericAPIView):
@@ -278,65 +319,16 @@ class NoteShare(GenericAPIView):
         try:
             title = request.data['title']
             note = request.data['note']
+            user = request.user
 
             if note == "":
                 return HttpResponse(json.dumps(smd))
             else:
-                user = User.objects.get(pk=1)
+                user = get_object_or_404(User, pk=user.id)
                 note_create = Notes(user_id=user.id, note=note, title=title)
 
                 note_create.save()
                 return redirect(
                     "https://twitter.com/intent/tweet?source=webclient&text=" + str(title) + "\n" + str(note))
         except (IntegrityError, Exception):
-            return HttpResponse(json.dumps(smd))
-
-
-# class Archive(GenericAPIView):
-
-#     def get(self, request, user_id):
-#         pass
-
-#     def post(self, request, user_id):
-#         pass
-
-
-# class Trash(GenericAPIView):
-
-#     def get(self, request):
-#         pass
-
-#     def post(self, request, user_id):
-#         pass
-
-
-# class Reminders(GenericAPIView):
-
-#     def get(self, request):
-#         pass
-
-#     def post(self, request):
-#         pass
-
-
-
-def labelvalidator(label, user_id):
-    lab = []
-    try:
-        z = 0
-        # print(len(label))
-        ll = Label.objects.filter(user_id=user_id)
-        for i in range(len(label)):
-            Label.objects.get(name=label[i], user_id=user_id)
-            lab.append(ll.values()[i]["name"])
-        return False, lab
-    except Exception:
-        return True, lab
-
-def collvalidator(collaborators):
-    try:
-        for email in collaborators:
-            email_id = User.objects.filter(email=email)
-            id = email_id.values()[0]['id']
-    except Exception:
-        return True
+            return HttpResponse(json.dumps(smd, indent=2), status=400)

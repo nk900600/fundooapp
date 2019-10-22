@@ -8,8 +8,8 @@ from django.conf.urls import include, url
 urlpatterns = [
     path('', views.home, name='home'),
     path('registration/', views.Registrations.as_view()),
-    path('api/token/', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('api/token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
+
+    # path('api/token/refresh/', jwt_views.TokenRefreshView.as_view(), name='token_refresh'),
     path('login/', views.Login.as_view()),
     path('forgotpassword', views.ForgotPassword.as_view() ,name="resetpassword"),
     path('activate/<surl>/', views.activate, name="activate"),

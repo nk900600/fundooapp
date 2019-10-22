@@ -21,14 +21,17 @@ from django.core.mail import EmailMessage
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.template.loader import render_to_string
+from django.utils.decorators import method_decorator
 from django.views.decorators.clickjacking import xframe_options_deny
-from django.views.decorators.csrf import csrf_protect
+from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from jwt import ExpiredSignatureError
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import GenericAPIView
+import pdb
 
-from services.redis import Redis
-from services.token import token_activation, token_validation
+from note.decorators import loginapi
+from lib.redis import red
+from lib.token import token_activation, token_validation
 
 from .serializer import RegistrationSerializer, UserSerializer, LoginSerializer, ResetSerializer, EmailSerializer
 from django.core.validators import validate_email
@@ -112,11 +115,12 @@ class Registrations(GenericAPIView):
                     }
                     return HttpResponse(json.dumps(smd))
             except Exception:
-                smd["success"]=False
-                smd["message"]="username already taken"
+                smd["success"] = False
+                smd["message"] = "username already taken"
                 return HttpResponse(json.dumps(smd))
 
 
+@method_decorator(loginapi, name='dispatch')
 class Login(GenericAPIView):
     """
     :param APIView: user request is made from the user
@@ -124,15 +128,13 @@ class Login(GenericAPIView):
     """
     serializer_class = LoginSerializer
 
-    def get(self, request):
-        return render(request, 'user/login.html')
+    # def get(self,request):
+    #     return render(request, 'user/login.html')
 
-    @xframe_options_deny
-    # @csrf_protect
+    # @xframe_options_deny
+    @csrf_exempt
     def post(self, request):
 
-        user = request.user
-        print(user.username)
         username = request.data['username']
         password = request.data['password']
         smd = {
@@ -151,7 +153,7 @@ class Login(GenericAPIView):
 
             token = token_validation(username, password)
 
-            red = Redis()
+            # red = Redis()
             red.set(user.username, token)
             smd = {
                 'success': True,
@@ -178,7 +180,7 @@ class Logout(GenericAPIView):
         try:
 
             user = request.user
-            red = Redis()
+            # red = Redis()
             red.delete(user.username)
             smd = {"success": True, "message": " logged out", "data": []}
             return HttpResponse(json.dumps(smd))
@@ -193,8 +195,8 @@ class ForgotPassword(GenericAPIView):
     """
     serializer_class = EmailSerializer
 
-    def get(self, request):
-        return HttpResponse(json.dumps("hi"))
+    # def get(self, request):
+    #     return HttpResponse(json.dumps("hi"))
 
     # @csrf_protect
     def post(self, request):
@@ -209,7 +211,7 @@ class ForgotPassword(GenericAPIView):
         # email validation is done here
         try:
             if email == "":
-                response ='email field is empty please provide vaild input'
+                response = 'email field is empty please provide vaild input'
                 # return HttpResponse(json.dumps(smd))
             else:
 
@@ -218,12 +220,16 @@ class ForgotPassword(GenericAPIView):
                 except Exception:
                     return HttpResponse(json.dumps(smd))
                 try:
-
-                    user = User.objects.get(email=email)
+                    # pdb.set_trace()
+                    print(email)
+                    user = User.objects.filter(email=email)
+                    useremail = user.values()[0]["email"]
+                    username = user.values()[0]["username"]
+                    id = user.values()[0]["id"]
 
                     #  here user is not none then token is generated
-                    if user is not None:
-                        token = token_activation(user.username, user.id)
+                    if useremail is not None:
+                        token = token_activation(username, id)
                         url = str(token)
                         surl = get_surl(url)
                         z = surl.split("/")
@@ -231,11 +237,11 @@ class ForgotPassword(GenericAPIView):
                         # email is generated  where it is sent the email address entered in the form
                         mail_subject = "Activate your account by clicking below link"
                         mail_message = render_to_string('user/reset_password_token_link.html', {
-                            'user': user.username,
+                            'user': username,
                             'domain': get_current_site(request).domain,
                             'surl': z[2]
                         })
-                        recipientemail = user.email
+                        recipientemail = email
                         email = EmailMessage(mail_subject, mail_message, to=[recipientemail])
                         email.send()
 
@@ -250,12 +256,13 @@ class ForgotPassword(GenericAPIView):
                     #     return HttpResponse(json.dumps(smd))
                 except Exception as e:
                     print(e)
-                    response =smd['message'] = "not a registered user",
+                    response = smd['message'] = "not a registered user",
                     # return HttpResponse(json.dumps(smd))
         except Exception:
-            response = "dff"
+            smd['message'] = "not a registered user",
 
         return HttpResponse(json.dumps(response))
+
 
 def activate(request, surl):
     """

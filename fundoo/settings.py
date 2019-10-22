@@ -8,10 +8,10 @@ https://docs.djangoproject.com/en/2.2/topics/settings/
 
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/2.2/ref/settings/
-
 """
-
 import datetime
+# from datetime import datetime
+import logging
 import os
 from dotenv import load_dotenv, find_dotenv
 from pathlib import *
@@ -52,24 +52,21 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'django_short_url',
-
-    # 'django.contrib.sites',
-    #
-    # 'allauth',
-    # 'allauth.account',
-    # 'allauth.socialaccount',
-    #
-    # 'allauth.socialaccount.providers.github',
+    "django_cron",'django_crontab',
 
 ]
-
+CRON_CLASSES = [
+    "fundoo.cron.MyCronJob",
+]
+DJANGO_CRON_LOCK_BACKEND = "django_cron.backends.lock.cache.CacheLock"
+# DJANGO_CRON_LOCKFILE_PATH=
 DB = 0
 PORT = 6379
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    # 'django.middleware.csrf.CsrfViewMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -77,8 +74,6 @@ MIDDLEWARE = [
     'django.middleware.common.BrokenLinkEmailsMiddleware',
     'django.middleware.common.CommonMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',  # <--
-
-
 
 ]
 
@@ -123,8 +118,9 @@ AUTHENTICATION_BACKENDS = (
 
 LOGIN_URL = 'login/'
 LOGOUT_URL = 'logout/'
-LOGIN_REDIRECT_URL = '/note'
-SOCIALACCOUNT_QUERY_EMAIL=True
+LOGIN_REDIRECT_URL = '/api/note'
+SOCIALACCOUNT_QUERY_EMAIL = True
+AWS_BUCKET = os.getenv("AWS_BUCKET")
 EMAIL_BACKENDS = 'django.core.main.backends.console.EmailBackends'
 BASE_URL = os.getenv('BASE_URL')
 REST_FRAMEWORK = {
@@ -162,7 +158,6 @@ AUTH_PASSWORD_VALIDATORS = [
         'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
     },
 ]
-
 
 # Internationalization
 # https://docs.djangoproject.com/en/2.2/topics/i18n/
@@ -207,11 +202,11 @@ SWAGGER_SETTINGS = {
             'in': 'header',
             'name': ' Authorization'
         },
-'basic': {
-        'type': 'basic'
-    },
+        'basic': {
+            'type': 'basic'
+        },
 
-}}
+    }}
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': datetime.timedelta(days=1),
@@ -238,14 +233,14 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_LIFETIME': datetime.timedelta(minutes=5),
     'SLIDING_TOKEN_REFRESH_LIFETIME': datetime.timedelta(days=1),
 }
-SOCIAL_AUTH__EMAIL_REQUIRED=True
+SOCIAL_AUTH__EMAIL_REQUIRED = True
 SOCIAL_AUTH_GITHUB_KEY = os.getenv("SOCIAL_AUTH_GITHUB_KEY")
 SOCIAL_AUTH_GITHUB_SECRET = os.getenv("SOCIAL_AUTH_GITHUB_SECRET")
 
 SOCIAL_AUTH_FACEBOOK_KEY = os.getenv("SOCIAL_AUTH_FACEBOOK_KEY")  # App ID
 SOCIAL_AUTH_FACEBOOK_SECRET = os.getenv("SOCIAL_AUTH_FACEBOOK_SECRET")  # App Secret
 
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY=os.getenv('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv('SOCIAL_AUTH_GOOGLE_OAUTH2_KEY')
 SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv('SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET')
 
 AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
@@ -260,6 +255,7 @@ SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {  # add this
     'fields': 'id, name, email, picture.type(large), link'
 }
 from social_core.backends.github import GithubOAuth2
+
 # SOCIAL_AUTH_FACEBOOK_EXTRA_DATA = [  # add this
 #     ('name', 'name'),
 #     ('email', 'email'),
@@ -270,4 +266,18 @@ SOCIAL_AUTH_GITHUB_SCOPE = ['user:email']
 SOCIAL_AUTH_GITHUB_PROFILE_EXTRA_PARAMS = {  # add this
     'fields': 'id, name, email, link'
 }
+CRONJOBS = [
+    ('*/1 * * * *', 'note.cron.my_scheduled_job')
+]
+DJANGO_CRON_LOCKFILE_PATH="/tmp"
 
+ALLOW_PARALLEL_RUNS = True
+
+DJANGO_CRON_CACHE = 'cron_cache'
+
+
+
+formatter = logging.Formatter('%(levelname)s \t:%(asctime)s \t:%(name)s \t:%(message)s')
+file_handler = logging.FileHandler('fundoo.log')
+file_handler.setFormatter(formatter)
+# logger.addHandler(file_handler)

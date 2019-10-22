@@ -16,13 +16,16 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from django.conf.urls import include, url
-from services.swagger_view import schema_view
+from .swagger_view import schema_view
+from rest_framework_simplejwt import views as jwt_views
+
 from django.contrib.auth import views as auth_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("",include('user.url')),
-    path("",include('note.url')),
+    path("api/",include('user.url')),
+    path('api/token/', jwt_views.TokenObtainPairView.as_view(), name='token_obtain_pair'),
+    path("api/",include('note.url')),
     url('fundoo/',schema_view, name="swagger"),
     url(r'^oauth/', include('social_django.urls', namespace='social')),  # <--
     url(r'^api-auth/', include('rest_framework.urls', namespace='rest_framework')),

@@ -14,8 +14,9 @@ from datetime import datetime, timedelta
 from functools import wraps
 import django
 from django.core import serializers
+from django.core.paginator import Paginator, PageNotAnInteger, EmptyPage
 from django.utils import timezone as tz
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 import redis
 import pdb
 from django.contrib.auth.models import User
@@ -35,18 +36,49 @@ from lib.redis import red
 # import logging
 from .models import Notes, Label
 from pymitter import EventEmitter
+
 ee = EventEmitter()
 
 s3 = AmazoneS3()
-#import django.core.files.uploadedfile as d
+# import django.core.files.uploadedfile as d
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(file_handler)
 
-@method_decorator(login_decorator, name='dispatch')
+
+# @method_decorator(login_decorator, name='dispatch')
 class Create(GenericAPIView):
     serializer_class = NotesSerializer
+    #
+    # def get(self,request):
+    #     # try:
+    #     user=request.user
+    #     notes=Notes.objects.filter(user_id=user.id)
+    #     paginator = Paginator(notes.values(), 25)
+        # print(paginator)
+        # page = request.GET.get('http://localhost:8000/api/note/')
+        # contacts = paginator.get_page(paginator)
+        #
+        # return render(request, "user/pagination.html",{"data": contacts})
+        # return render(request, "user/pagination.html", {"data": notes.values()})
+        # except Exception:
+        #     return HttpResponse("dgde")
+
+    def get(self,request):
+        notes_list = Notes.objects.all()
+        page = request.GET.get('page', 1)
+
+        paginator = Paginator(notes_list, 20)
+        try:
+            users = paginator.page(page)
+        except PageNotAnInteger:
+            users = paginator.page(1)
+        except EmptyPage:
+            users = paginator.page(paginator.num_pages)
+
+        return render(request, 'user/test.html', {'users': users})
+
 
     # parser_classes = (FormParser,FileUploadParser)
     @staticmethod
@@ -307,7 +339,6 @@ class Archive(GenericAPIView):
     # serializer_class = ArchiveSerializer
 
     def get(self, request):
-
         user = request.user
         no = Notes.objects.filter(user_id=user.id, is_archive=True)
         logger.info("archive data is loaded")

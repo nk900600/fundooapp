@@ -20,7 +20,7 @@ logger.setLevel(logging.DEBUG)
 logger.addHandler(file_handler)
 
 
-def loginapi(function):
+def redirect_after_login(function):
     """
     :param function: function is called
     :return: will check token expiration
@@ -67,13 +67,14 @@ def login_decorator(function):
                 return function(request, *args, **kwargs)
 
         except Exception as e:
-            if TypeError:
-                logger.error("typeerror as note query does not match ")
-                smd = {"success": False, "message": "query does not match", 'data': []}
-                return HttpResponse(json.dumps(smd, indent=2), status=400)
-            else:
-                logger.error("broad exceptions as user is not logged in ")
-                return HttpResponse(json.dumps(smd, indent=2), status=400)
+            print(e)
+            # if TypeError:
+            #     logger.error("typeerror as note query does not match ")
+            #     smd = {"success": False, "message": "query does not match", 'data': []}
+            #     return HttpResponse(json.dumps(smd, indent=2), status=400)
+            # else:
+            logger.error("broad exceptions as user is not logged in ")
+            return HttpResponse(json.dumps(smd, indent=2), status=400)
 
     return wrapper
 
@@ -97,7 +98,7 @@ def label_coll_validator_post(function):
             pass
 
         try:
-            collaborators = request.data['coll']
+            collaborators = request.data['collaborators']
             if collvalidator(collaborators):
                 smd = {'success': False, 'message': 'email not vaild',
                        'data': []}

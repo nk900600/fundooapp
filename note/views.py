@@ -27,9 +27,8 @@ from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser, FileUploadParser
 from rest_framework.response import Response
 
-from fundoo.settings import PORT, DB, file_handler
-from note.serialized import NotesSerializer, UpdateSerializer, ShareSerializer, LabelSerializer, LabelupdateSerializer, \
-    ArchiveSerializer
+from fundoo.settings import PORT, DB, file_handler, TWITTER_PAGE
+from note.serialized import NotesSerializer, UpdateSerializer, ShareSerializer, LabelSerializer  # ArchiveSerializer
 from lib.amazones3 import AmazoneS3
 from note.decorators import login_decorator, label_coll_validator_put, label_coll_validator_post
 from lib.redis import red
@@ -57,47 +56,52 @@ class Create(GenericAPIView):
         :param request:  request from user
         :return:  will save note details posted by user
         """
-        # data is taken from user
-        data = request.data
-        user = request.user
-        data['user'] = user.id
-        coll_list = []  # empty coll  list is formed where data is input is converted to id
-        label_list = []  # empty label list is formed where data is input is converted to id
         try:
-            label = data["label"]
-            # for loop is used for the getting label input and coll input ids
-            for name in label:
-                lab_id = Label.objects.filter(user_id=1, name=name)
-                id = lab_id.values()[0]['id']
-                label_list.append(id)
-            data['label'] = label_list
-        except KeyError:
-            pass
-        try:
-            coll = data['coll']
-            # for loop is used for the getting label input and coll input ids
-            for email in coll:
-                email_id = User.objects.filter(email=email)
-                id = email_id.values()[0]['id']
-                coll_list.append(id)
-            data['coll'] = coll_list
-        except KeyError:
-            pass
+            # data is taken from user
 
-        serializer = NotesSerializer(data=data, partial=True)
+            data = request.data
+            user = request.user
+            data['user'] = user.id
+            collaborator_list = []  # empty coll  list is formed where data is input is converted to id
+            label_list = []  # empty label list is formed where data is input is converted to id
+            try:
+                label = data["label"]
+                # for loop is used for the getting label input and coll input ids
+                for name in label:
+                    label_name = Label.objects.filter(user_id=user.id, name=name)
+                    label_id = label_name.values()[0]['id']
+                    label_list.append(label_id)
+                data['label'] = label_list
+            except KeyError:
+                pass
+            try:
+                collaborator = data['collaborator']
+                # for loop is used for the getting label input and coll input ids
+                for email in collaborator:
+                    email_id = User.objects.filter(email=email)
+                    id = email_id.values()[0]['id']
+                    collaborator_list.append(id)
+                data['collaborator'] = collaborator_list
+            except KeyError:
+                pass
 
-        if serializer.is_valid():
-            note_create = serializer.save(user=user)
-            red.set(note_create.id, str(json.dumps(serializer.data)))  # created note is cached in redis
-            smd = {'success': True, 'message': "note created", 'data': []}
-            # logging.info("new note is created")
-            logger.info("note is created")
-            return HttpResponse(json.dumps(smd, indent=2), status=201)
-        smd = {'success': False, 'message': "note was not created", 'data': []}
-        print(serializer.error_messages)
-        # return HttpResponse(serializer.error_messages())
-        logger.error("note was not created")
-        return HttpResponse(json.dumps(smd, indent=2), status=400)
+            serializer = NotesSerializer(data=data, partial=True)
+
+            if serializer.is_valid():
+                note_create = serializer.save(user=user)
+                red.set(note_create.id, str(json.dumps(serializer.data)))  # created note is cached in redis
+                response = {'success': True, 'message': "note created", 'data': []}
+                # logging.info("new note is created")
+                logger.info("note is created")
+                return HttpResponse(json.dumps(response, indent=2), status=201)
+            response = {'success': False, 'message': "note was not created", 'data': []}
+            print(serializer.error_messages)
+            # return HttpResponse(serializer.error_messages())
+            logger.error("note was not created")
+            return HttpResponse(json.dumps(response, indent=2), status=400)
+        except Exception as e:
+            response = {'success': False, 'message': "something went wrong", 'data': []}
+            return Response(response, status=404)
 
 
 @method_decorator(login_decorator, name='dispatch')
@@ -110,16 +114,23 @@ class Update(GenericAPIView):
         :param note_id:  note id
         :return: will fetch note id from database
         """
-        # pdb.set_trace()
-        get_object_or_404(Notes, id=note_id)
-        redis_data = red.get(str(note_id))
-        if redis_data is None:
-            note = Notes.objects.filter(id=note_id)
-            serialized_data = NotesSerializer(note, many=True)
-            logger.info("note was fetched from database")
-            return HttpResponse(json.dumps(serialized_data.data, indent=1))
-        logger.info("note was fetched form redis")
-        return HttpResponse(redis_data)
+        try:
+            # pdb.set_trace()
+            # get_object_or_404(Notes, id=note_id)
+            redis_data = red.get(str(note_id))
+            if redis_data is None:
+                note = Notes.objects.filter(id=note_id)
+                serialized_data = NotesSerializer(note, many=True)
+                logger.info("note was fetched from database")
+                return HttpResponse(json.dumps(serialized_data.data, indent=1))
+            logger.info("note was fetched form redis")
+            return HttpResponse(redis_data)
+        except Notes.DoesNotExist:
+            response = {'success': False, 'message': "note does not exists", 'data': []}
+            return Response(response, status=404)
+        except Exception:
+            response = {'success': False, 'message': "something went wrong", 'data': []}
+            return Response(response, status=404)
 
     @staticmethod
     @label_coll_validator_put
@@ -129,44 +140,47 @@ class Update(GenericAPIView):
         :param note_id:  note id
         :return: will fetch note id from database
         """
-
-        instance = Notes.objects.get(id=note_id)
-        # data is fetched from user
-        data = request.data
-        coll_list = []  # empty coll  list is formed where data is input is converted to id
-        label_list = []  # empty label list is formed where data is input is converted to id
         try:
-            label = data["label"]
-            # for loop is used for the getting label input and coll input ids
-            for name in label:
-                lab_id = Label.objects.filter(user_id=1, name=name)
-                id = lab_id.values()[0]['id']
-                label_list.append(id)
-            data['label'] = label_list
-        except KeyError:
-            logger.error("keyerror on label as label field was not given")
-            pass
-        try:
-            coll = data['coll']
-            # for loop is used for the getting label input and coll input ids
-            for email in coll:
-                email_id = User.objects.filter(email=email)
-                id = email_id.values()[0]['id']
-                coll_list.append(id)
-            data['coll'] = coll_list
-        except KeyError:
-            pass
-        serializer = NotesSerializer(instance, data=data, partial=True)
-        # here serialized data checked for validation and saved
-        if serializer.is_valid():
-            note_create = serializer.save()
-            red.set(note_create.id, str(json.dumps(serializer.data)))  # created note is cached in redis
-            logger.info("note was updated")
-            smd = {'success': True, 'message': "note created", 'data': []}
-            return HttpResponse(json.dumps(smd, indent=2), status=200)
-        logger.error("note was not updated")
-        smd = {'success': False, 'message': "note was not created", 'data': []}
-        return HttpResponse(json.dumps(smd, indent=2), status=400)
+            # data is fetched from user
+            instance = Notes.objects.get(id=note_id)
+            data = request.data
+            collaborator_list = []  # empty coll  list is formed where data is input is converted to id
+            label_list = []  # empty label list is formed where data is input is converted to id
+            try:
+                label = data["label"]
+                # for loop is used for the getting label input and coll input ids
+                for name in label:
+                    label_values = Label.objects.filter(user_id=1, name=name)
+                    label_id = label_values.values()[0]['id']
+                    label_list.append(label_id)
+                data['label'] = label_list
+            except KeyError:
+                logger.error("key error on label as label field was not given")
+                pass
+            try:
+                collaborator = data['collaborator']
+                # for loop is used for the getting label input and coll input ids
+                for email in collaborator:
+                    emails = User.objects.filter(email=email)
+                    email_id = emails.values()[0]['id']
+                    collaborator_list.append(email_id)
+                data['collaborator'] = collaborator_list
+            except KeyError:
+                pass
+            serializer = NotesSerializer(instance, data=data, partial=True)
+            # here serialized data checked for validation and saved
+            if serializer.is_valid():
+                note_create = serializer.save()
+                red.set(note_create.id, str(json.dumps(serializer.data)))  # created note is cached in redis
+                logger.info("note was updated")
+                response = {'success': True, 'message': "note created", 'data': []}
+                return HttpResponse(json.dumps(response, indent=2), status=200)
+            logger.error("note was not updated")
+            response = {'success': False, 'message': "note was not created", 'data': []}
+            return HttpResponse(json.dumps(response, indent=2), status=400)
+        except Exception as e:
+            response = {'success': False, 'message': "something went wrong", 'data': []}
+            return Response(response, status=404)
 
     def delete(self, request, note_id):
         """
@@ -196,60 +210,75 @@ class LabelsCreate(GenericAPIView):
         :param request: request from user
         :return: will get all lables created by user
         """
-        user = request.user
-        print(user)
-        labels = Label.objects.filter(user_id=user.id)
-        lab = []
-        for i in labels:
-            lab.append(i.name)
-        return HttpResponse(json.dumps(lab))
+        response = {
+            "success": False,
+            "message": "something went wrong",
+            "data": []
+        }
+        try:
+            user = request.user
+            labels = Label.objects.filter(user_id=user.id)
+            label_name = []
+            for i in labels:
+                label_name.append(i.name)
+            return Response(label_name, status=200)
+        except Exception:
+            return Response(response, status=400)
 
     def post(self, request):
         """
         :param request: request from user
         :return: will get all lables created by user
         """
-        user = request.user
-        label = request.data["name"]
-        if Label.objects.filter(user_id=user.id, name=label).exists():
-            logger.warning("note is already exists")
-            smd = {"success": False, "message": "note is already exists", "data": label}
-            return HttpResponse(json.dumps(smd, indent=2), status=400)
+        response = {"success": False, "message": "something went wrong", "data": []}
+        try:
+            label = request.data["name"]
+            user = request.user
+            if Label.objects.filter(user_id=user.id, name=label).exists():
+                logger.warning("note is already exists")
+                response = {"success": False, "message": "note is already exists", "data": label}
+                return Response(response, status=400)
 
-        Label.objects.create(user_id=user.id, name=label)
-        logger.info("note is created")
-        smd = {"success": True, "message": "note is created", "data": label}
-        return HttpResponse(json.dumps(smd, indent=2), status=201)
+            Label.objects.create(user_id=user.id, name=label)
+            logger.info("note is created")
+            response = {"success": True, "message": "note is created", "data": label}
+            return Response(response, status=201)
+        except Exception:
+            return Response(response, status=404)
 
 
 @method_decorator(login_decorator, name='dispatch')
 class LabelsUpdate(GenericAPIView):
-    serializer_class = LabelupdateSerializer
+    serializer_class = LabelSerializer
 
-    def put(self, request, name):
+    def put(self, request, label_id):
         """
         :param request: request from user
         :param name: name of the label
         :return: will update the data
         """
+        response = {
+            "success": False,
+            "message": "Something bad happened",
+            "data": []
+        }
         try:
-            # pdb.set_trace()
             user = request.user
-            # label = request.data["name"]
-            # print(type(request.body))
-            res=json.loads(request.body)
-            label=res['name']
-            lab = get_object_or_404(Label, name=name, user_id=user.id)
-            lab.name = label
-            lab.save()
-            logger.info("label is update")
-            smd = {"success": True, "message": "label is update", "data": [label]}
-            return Response(smd, status=200)
+            requestBody = json.loads(request.body)
+            label_name = requestBody['name']
+            label = get_object_or_404(Label, id=label_id, user_id=user.id)
+            label.name = label_name
+            label.save()
+            response["message"] = "label updated successfully"
+            response["data"] = [label_name]
+            response["success"] = True
+            return HttpResponse(json.dumps(response, indent=2), status=200)
         except KeyError:
             logger.warning("label does not exist")
-            smd = {"success": True, "message": "label does not exist", "data": []}
-            return Response(smd, status=400)
-
+            response["message"] = "label does not exist"
+            return Response(response, status=400)
+        except Exception as e:
+            return Response(response, status=404)
 
     def delete(self, request, name):
         """
@@ -257,21 +286,30 @@ class LabelsUpdate(GenericAPIView):
         :param name: name of the label
         :return: will delete the data
         """
-        user = request.user
-        lab = Label.objects.get(name=name, user_id=user.id)
-        lab.delete()
-        logger.info("note is deleted")
-        smd = {"success": True, "message": "note is deleted", "data": []}
-        return HttpResponse(json.dumps(smd, indent=2),status=204)
+        response = {
+            "success": False,
+            "message": "Something bad happened",
+            "data": {}
+        }
+        try:
+            user = request.user
+            label_name = Label.objects.get(name=name, user_id=user.id)
+            label_name.delete()
+            logger.info("note is deleted")
+            response = {"success": True, "message": "note is deleted", "data": []}
+            return Response(response, status=204)
+        except Exception as e:
+            return Response(response, status=404)
 
 
-@method_decorator(login_decorator, name='dispatch')
+# @method_decorator(login_decorator, name='dispatch')
 class Archive(GenericAPIView):
     # serializer_class = ArchiveSerializer
 
     def get(self, request):
+
         user = request.user
-        no = Notes.objects.filter(user_id=user.id, archive=True)
+        no = Notes.objects.filter(user_id=user.id, is_archive=True)
         logger.info("archive data is loaded")
         return HttpResponse(no.values(), status=200)
 
@@ -291,13 +329,25 @@ class Trash(GenericAPIView):
 class Reminders(GenericAPIView):
 
     def get(self, request):
-        end_dt = tz.now() + tz.timedelta(days=10)  # you should tune the value
-        start_dt = tz.now()  #
+        # pdb.set_trace()
         user = request.user
         try:
-            no = Notes.objects.filter(user_id=user.id, reminder__range=(start_dt, end_dt))
+            reminder_list = Notes.objects.all().values_list('reminder', flat=True)
+            fired = []
+            pending = []
+            for i in range(len(reminder_list.values())):
+                if reminder_list.values()[i]['reminder'] is None:
+                    continue
+                elif tz.now() > reminder_list.values()[i]['reminder']:
+                    fired.append(reminder_list.values()[i])
+                else:
+                    pending.append(reminder_list.values()[i])
+            reminder = {
+                'fired': fired,
+                'pending': pending
+            }
             logger.info("Reminders data is loaded")
-            return HttpResponse(no.values(), status=200)
+            return HttpResponse(reminder.values(), status=200)
         except TypeError:
             logger.info("no reminder set")
             smd = {"success": False, "message": "no reminder set", 'data': []}
@@ -328,7 +378,6 @@ class NoteShare(GenericAPIView):
                 note_create = Notes(user_id=user.id, note=note, title=title)
 
                 note_create.save()
-                return redirect(
-                    "https://twitter.com/intent/tweet?source=webclient&text=" + str(title) + "\n" + str(note))
+                return redirect(TWITTER_PAGE + str(title) + "\n" + str(note))
         except (IntegrityError, Exception):
             return HttpResponse(json.dumps(smd, indent=2), status=400)

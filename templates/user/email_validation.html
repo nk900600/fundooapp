@@ -1,0 +1,56 @@
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+     <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <title>Email Validation</title>
+
+
+
+
+<body>
+
+    <div class="container" style="margin-top:30px ">
+        <div class="row" align="center">
+            <div class="col-8 offset-2">
+                  <h2>Fundoo</h2><br>
+                  <h5>Please confirm your email address </h5><br>
+                  <!--div class="fakeimg">Fake Image<!/div-->
+                  <p>You have created a fundoo ID with the username: {{ user }}. As an extra security measure, please verify this is the correct email address linked to your fundoo ID by clicking the button below. </p>
+                <br> <ul class="nav nav-pills nav-justified ">
+                     <li class="nav-item " >
+                       <a class="nav-link active" href="http://{{ domain }}{%  url 'reset_password' surl=surl %}" >Confirm your Email with fundoo</a>
+                     </li>
+                </ul>
+                <small>This link will expire in 2 days. </small><br><br>
+                 </div>
+
+
+                 <div class="col-10 offset-1">
+                <small style="font-size: x-small">You have received this email because the user {{ user }} has requested to
+                    add this email to the fundoo account at <a href="#">fundoo</a>. You can safely disregard this message if
+                    you did not add this email address. </small><br>
+                     </div>
+            <div class="col-2 offset-5" >
+                <br><br>
+                <small style="font-size: x-small">
+                © Bridge Labz Inc., 2019
+                144 Townsend Street
+                San Francisco, CA 94107
+                    </small><br>
+                </div>
+
+
+
+        </div>
+    </div>
+
+
+</body>
+</html>

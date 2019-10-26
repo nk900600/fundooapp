@@ -29,7 +29,9 @@ from rest_framework.exceptions import ValidationError
 from rest_framework.generics import GenericAPIView
 import pdb
 
-from note.decorators import loginapi
+from django.core.mail import EmailMultiAlternatives
+
+from note.decorators import redirect_after_login
 from lib.redis import red
 from lib.token import token_activation, token_validation
 
@@ -54,10 +56,9 @@ class Registrations(GenericAPIView):
     """
     serializer_class = UserSerializer
 
-    def get(self, request):
-        return render(request, 'user/registration.html')
+    # def get(self, request):
+    #     return render(request, 'user/registration.html')
 
-    # @csrf_protect  'Login' object has no attribute 'COOKIES'
     def post(self, request):
 
         username = request.data['username']
@@ -74,17 +75,17 @@ class Registrations(GenericAPIView):
             validate_email(email)
         except Exception:
             smd['message'] = "please enter vaild email address"
-            return HttpResponse(json.dumps(smd))
+            return HttpResponse(json.dumps(smd), status=400)
 
         # user input is checked
         if username == "" or email == "" or password == "":
             smd['message'] = "one of the details missing"
-            return HttpResponse(json.dumps(smd))
+            return HttpResponse(json.dumps(smd), status=400)
 
         # if email exists it will show error message
         elif User.objects.filter(email=email).exists():
             smd['message'] = "email address is already registered "
-            return HttpResponse(json.dumps(smd))
+            return HttpResponse(json.dumps(smd), status=400)
 
         else:
             try:
@@ -100,7 +101,7 @@ class Registrations(GenericAPIView):
                     z = surl.split("/")
 
                     mail_subject = "Activate your account by clicking below link"
-                    mail_message = render_to_string('user/activatetoken.html', {
+                    mail_message = render_to_string('user/email_validation.html', {
                         'user': user_created.username,
                         'domain': get_current_site(request).domain,
                         'surl': z[2]
@@ -113,14 +114,14 @@ class Registrations(GenericAPIView):
                         'message': 'please check the mail and click on the link  for validation',
                         'data': [token],
                     }
-                    return HttpResponse(json.dumps(smd))
+                    return HttpResponse(json.dumps(smd), status=201)
             except Exception:
                 smd["success"] = False
                 smd["message"] = "username already taken"
-                return HttpResponse(json.dumps(smd))
+                return HttpResponse(json.dumps(smd), status=400)
 
 
-@method_decorator(loginapi, name='dispatch')
+@method_decorator(redirect_after_login, name='dispatch')
 class Login(GenericAPIView):
     """
     :param APIView: user request is made from the user
@@ -145,7 +146,7 @@ class Login(GenericAPIView):
         # validation is done
         if username == "" or password == "":
             smd['message'] = 'one or more fields is empty'
-            return HttpResponse(json.dumps(smd))
+            return HttpResponse(json.dumps(smd), status=400)
 
         user = auth.authenticate(username=username, password=password)
         # if user is not none then we will generate token
@@ -161,11 +162,11 @@ class Login(GenericAPIView):
                 'data': [token],
             }
 
-            return HttpResponse(json.dumps(smd))
+            return HttpResponse(json.dumps(smd), status=201)
 
         else:
             smd['message'] = 'invaild credentials'
-            return HttpResponse(json.dumps(smd))
+            return HttpResponse(json.dumps(smd), status=400)
 
 
 class Logout(GenericAPIView):
@@ -183,9 +184,9 @@ class Logout(GenericAPIView):
             # red = Redis()
             red.delete(user.username)
             smd = {"success": True, "message": " logged out", "data": []}
-            return HttpResponse(json.dumps(smd))
+            return HttpResponse(json.dumps(smd), status=200)
         except Exception:
-            return HttpResponse(json.dumps(smd))
+            return HttpResponse(json.dumps(smd), status=400)
 
 
 class ForgotPassword(GenericAPIView):
@@ -203,65 +204,63 @@ class ForgotPassword(GenericAPIView):
 
         global response
         email = request.data["email"]
-        smd = {
+        response = {
             'success': False,
             'message': "not a vaild email ",
             'data': []
         }
         # email validation is done here
-        try:
-            if email == "":
-                response = 'email field is empty please provide vaild input'
-                # return HttpResponse(json.dumps(smd))
-            else:
 
-                try:
-                    validate_email(email)
-                except Exception:
-                    return HttpResponse(json.dumps(smd))
-                try:
-                    # pdb.set_trace()
-                    print(email)
-                    user = User.objects.filter(email=email)
-                    useremail = user.values()[0]["email"]
-                    username = user.values()[0]["username"]
-                    id = user.values()[0]["id"]
+        if email == "":
+            response['message'] = 'email field is empty please provide vaild input'
+            return HttpResponse(json.dumps(response), status=400)
+        else:
 
-                    #  here user is not none then token is generated
-                    if useremail is not None:
-                        token = token_activation(username, id)
-                        url = str(token)
-                        surl = get_surl(url)
-                        z = surl.split("/")
+            try:
+                validate_email(email)
+            except Exception:
+                return HttpResponse(json.dumps(response))
+            try:
+                # pdb.set_trace()
+                user = User.objects.filter(email=email)
+                useremail = user.values()[0]["email"]
+                username = user.values()[0]["username"]
+                id = user.values()[0]["id"]
 
-                        # email is generated  where it is sent the email address entered in the form
-                        mail_subject = "Activate your account by clicking below link"
-                        mail_message = render_to_string('user/reset_password_token_link.html', {
-                            'user': username,
-                            'domain': get_current_site(request).domain,
-                            'surl': z[2]
-                        })
-                        recipientemail = email
-                        email = EmailMessage(mail_subject, mail_message, to=[recipientemail])
-                        email.send()
+                #  here user is not none then token is generated
+                if useremail is not None:
+                    token = token_activation(username, id)
+                    url = str(token)
+                    surl = get_surl(url)
+                    z = surl.split("/")
 
-                        response = {
-                            'success': True,
-                            'message': "check email for vaildation ",
-                            'data': []
-                        }
-                        # here email is sent to user
-                        # return HttpResponse(json.dumps(smd))
-                    # else:
-                    #     return HttpResponse(json.dumps(smd))
-                except Exception as e:
-                    print(e)
-                    response = smd['message'] = "not a registered user",
-                    # return HttpResponse(json.dumps(smd))
-        except Exception:
-            smd['message'] = "not a registered user",
+                    # email is generated  where it is sent the email address entered in the form
+                    mail_subject = "Activate your account by clicking below link"
+                    mail_message = render_to_string('user/email_validation.html', {
+                        'user': username,
+                        'domain': get_current_site(request).domain,
+                        'surl': z[2]
+                    })
+                    recipientemail = email
+                    email = EmailMessage(mail_subject, mail_message, to=[recipientemail])
+                    # email.send()
+                    # send_mail('email/hello.tpl', {'user': user}, from_email, [recipientemail])
 
-        return HttpResponse(json.dumps(response))
+                    msg = EmailMultiAlternatives(subject="rgrgr", from_email="store@example.com",
+                                                 to=["customer@example.com"], body=mail_message)
+                    msg.attach_alternative(mail_message, "text/html")
+                    msg.send()
+                    response = {
+                        'success': True,
+                        'message': "check email for vaildation ",
+                        'data': []
+                    }
+                    # here email is sent to user
+                    return HttpResponse(json.dumps(response), status=201)
+            except Exception as e:
+                print(e)
+                response['message'] = "something went wrong"
+                return HttpResponse(json.dumps(response), status=400)
 
 
 def activate(request, surl):
@@ -284,16 +283,16 @@ def activate(request, surl):
             user.is_active = True
             user.save()
             messages.info(request, "your account is active now")
-            return redirect('/login')
+            return redirect('/api/login')
         else:
             messages.info(request, 'was not able to sent the email')
-            return redirect('/registration')
+            return redirect('/api/registration')
     except KeyError:
         messages.info(request, 'was not able to sent the email')
-        return redirect('/registration')
+        return redirect('/api/registration')
     except ExpiredSignatureError:
         messages.info(request, 'activation link expired')
-        return redirect('/registration')
+        return redirect('/api/registration')
 
 
 def reset_password(request, surl):
@@ -315,16 +314,16 @@ def reset_password(request, surl):
         if user is not None:
             context = {'userReset': user.username}
             print(context)
-            return redirect('/resetpassword/' + str(user))
+            return redirect('/api/resetpassword/' + str(user))
         else:
             messages.info(request, 'was not able to sent the email')
-            return redirect('/forgotpassword')
+            return redirect('/api/forgotpassword')
     except KeyError:
         messages.info(request, 'was not able to sent the email')
-        return redirect('/forgotpassword')
+        return redirect('/api/forgotpassword')
     except Exception:
         messages.info(request, 'activation link expired')
-        return redirect('/forgotpassword')
+        return redirect('/api/forgotpassword')
 
 
 class ResetPassword(GenericAPIView):
@@ -349,15 +348,15 @@ class ResetPassword(GenericAPIView):
         # password validation is done in this form
         if user_reset is None:
             smd['message'] = 'not a vaild user'
-            return HttpResponse(json.dumps(smd))
+            return HttpResponse(json.dumps(smd), status=400)
 
         elif password1 == "" or password2 == "":
             smd['message'] = 'one of the fields are empty'
-            return HttpResponse(json.dumps(smd))
+            return HttpResponse(json.dumps(smd), status=400)
 
         elif len(password1) <= 4 or len(password2) <= 4:
             smd['message'] = 'password should be 4 or  more than 4 character'
-            return HttpResponse(json.dumps(smd))
+            return HttpResponse(json.dumps(smd), status=400)
 
         else:
             try:
@@ -372,10 +371,10 @@ class ResetPassword(GenericAPIView):
                     'message': 'password reset done',
                     'data': [],
                 }
-                return HttpResponse(json.dumps(smd))
-            except django.contrib.auth.models.User.DoesNotExist:
+                return HttpResponse(json.dumps(smd), status=201)
+            except User.DoesNotExist:
                 smd['message'] = 'not a vaild user '
-                return HttpResponse(json.dumps(smd))
+                return HttpResponse(json.dumps(smd), status=400)
 
 
 def session(request):

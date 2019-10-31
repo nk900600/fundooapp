@@ -50,35 +50,35 @@ logger.addHandler(file_handler)
 # @method_decorator(login_decorator, name='dispatch')
 class Create(GenericAPIView):
     serializer_class = NotesSerializer
+
     #
     # def get(self,request):
     #     # try:
     #     user=request.user
     #     notes=Notes.objects.filter(user_id=user.id)
     #     paginator = Paginator(notes.values(), 25)
-        # print(paginator)
-        # page = request.GET.get('http://localhost:8000/api/note/')
-        # contacts = paginator.get_page(paginator)
-        #
-        # return render(request, "user/pagination.html",{"data": contacts})
-        # return render(request, "user/pagination.html", {"data": notes.values()})
-        # except Exception:
-        #     return HttpResponse("dgde")
+    # print(paginator)
+    # page = request.GET.get('http://localhost:8000/api/note/')
+    # contacts = paginator.get_page(paginator)
+    #
+    # return render(request, "user/pagination.html",{"data": contacts})
+    # return render(request, "user/pagination.html", {"data": notes.values()})
+    # except Exception:
+    #     return HttpResponse("dgde")
 
-    def get(self,request):
+    def get(self, request):
         notes_list = Notes.objects.all()
-        page = request.GET.get('page', 1)
+        page = request.GET.get('page')
 
-        paginator = Paginator(notes_list, 20)
+        paginator = Paginator(notes_list, 10)
         try:
-            users = paginator.page(page)
+            notes = paginator.page(page)
         except PageNotAnInteger:
-            users = paginator.page(1)
+            notes = paginator.page(1)
         except EmptyPage:
-            users = paginator.page(paginator.num_pages)
+            notes = paginator.page(paginator.num_pages)
 
-        return render(request, 'user/test.html', {'users': users})
-
+        return render(request, 'user/pagination.html', {'notes': notes})
 
     # parser_classes = (FormParser,FileUploadParser)
     @staticmethod
@@ -90,10 +90,10 @@ class Create(GenericAPIView):
         """
         try:
             # data is taken from user
-
+            # pdb.set_trace()
             data = request.data
             user = request.user
-            data['user'] = user.id
+            # data['user'] = user.id
             collaborator_list = []  # empty coll  list is formed where data is input is converted to id
             label_list = []  # empty label list is formed where data is input is converted to id
             try:
@@ -107,17 +107,19 @@ class Create(GenericAPIView):
             except KeyError:
                 pass
             try:
-                collaborator = data['collaborator']
+                collaborator = data['collaborators']
                 # for loop is used for the getting label input and coll input ids
                 for email in collaborator:
                     email_id = User.objects.filter(email=email)
                     id = email_id.values()[0]['id']
                     collaborator_list.append(id)
-                data['collaborator'] = collaborator_list
+                data['collaborators'] = collaborator_list
+                print(collaborator_list)
             except KeyError:
                 pass
 
             serializer = NotesSerializer(data=data, partial=True)
+            # print(serializer.initial_data)
 
             if serializer.is_valid():
                 note_create = serializer.save(user=user)
@@ -132,8 +134,9 @@ class Create(GenericAPIView):
             logger.error("note was not created")
             return HttpResponse(json.dumps(response, indent=2), status=400)
         except Exception as e:
+            print(e)
             response = {'success': False, 'message': "something went wrong", 'data': []}
-            return Response(response, status=404)
+            return Response(response, status=400)
 
 
 @method_decorator(login_decorator, name='dispatch')
@@ -181,22 +184,24 @@ class Update(GenericAPIView):
             try:
                 label = data["label"]
                 # for loop is used for the getting label input and coll input ids
-                for name in label:
-                    label_values = Label.objects.filter(user_id=1, name=name)
-                    label_id = label_values.values()[0]['id']
-                    label_list.append(label_id)
-                data['label'] = label_list
+                data['label'] = [Label.objects.get(name=name, user_id=request.user.id).id for name in label]
+                # print(data["label"])
+                # for name in label:
+                #     label_values = Label.objects.filter(user_id=request.user.id, name=name)
+                #     label_id = label_values.values()[0]['id']
+                #     label_list.append(label_id)
+                # data['label'] = label_list
             except KeyError:
                 logger.error("key error on label as label field was not given")
                 pass
             try:
-                collaborator = data['collaborator']
+                collaborator = data['collaborators']
                 # for loop is used for the getting label input and coll input ids
                 for email in collaborator:
                     emails = User.objects.filter(email=email)
                     email_id = emails.values()[0]['id']
                     collaborator_list.append(email_id)
-                data['collaborator'] = collaborator_list
+                data['collaborators'] = collaborator_list
             except KeyError:
                 pass
             serializer = NotesSerializer(instance, data=data, partial=True)
@@ -205,7 +210,7 @@ class Update(GenericAPIView):
                 note_create = serializer.save()
                 red.set(note_create.id, str(json.dumps(serializer.data)))  # created note is cached in redis
                 logger.info("note was updated")
-                response = {'success': True, 'message': "note created", 'data': []}
+                response = {'success': True, 'message': "note updated", 'data': []}
                 return HttpResponse(json.dumps(response, indent=2), status=200)
             logger.error("note was not updated")
             response = {'success': False, 'message': "note was not created", 'data': []}
@@ -230,7 +235,7 @@ class Update(GenericAPIView):
             return HttpResponse(json.dumps(smd, indent=2), status=201)
         except KeyError:
             logger.error("note was not deleted")
-            return HttpResponse(json.dumps(smd, indent=2), status=400)
+            return HttpResponse(json.dumps(smd, indent=2), status=404)
 
 
 @method_decorator(login_decorator, name='dispatch')
@@ -296,7 +301,9 @@ class LabelsUpdate(GenericAPIView):
         }
         try:
             user = request.user
-            requestBody = json.loads(request.body)
+            # requestBody = json.loads(request.body)
+            requestBody = request.data
+
             label_name = requestBody['name']
             label = get_object_or_404(Label, id=label_id, user_id=user.id)
             label.name = label_name
@@ -363,7 +370,8 @@ class Reminders(GenericAPIView):
         # pdb.set_trace()
         user = request.user
         try:
-            reminder_list = Notes.objects.all().values_list('reminder', flat=True)
+            reminder_data = Notes.objects.filter(user_id=user.id)
+            reminder_list = reminder_data.values_list('reminder', flat=True)
             fired = []
             pending = []
             for i in range(len(reminder_list.values())):
@@ -373,6 +381,7 @@ class Reminders(GenericAPIView):
                     fired.append(reminder_list.values()[i])
                 else:
                     pending.append(reminder_list.values()[i])
+
             reminder = {
                 'fired': fired,
                 'pending': pending
@@ -412,3 +421,11 @@ class NoteShare(GenericAPIView):
                 return redirect(TWITTER_PAGE + str(title) + "\n" + str(note))
         except (IntegrityError, Exception):
             return HttpResponse(json.dumps(smd, indent=2), status=400)
+
+
+class LazyLoading(GenericAPIView):
+    serializer_class = NotesSerializer
+
+    def get(self, request):
+        notes = Notes.objects.filter(user_id=request.user.id)
+        return render(request, 'user/email.html', {'notes': notes.values()[:15]})

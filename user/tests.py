@@ -21,7 +21,7 @@ class TestRegistration:
         url = BASE_URL + '/registration/'
         file = data[0]['test1']
         response = requests.post(url=url, data=file)
-        assert response.status_code == 200
+        assert response.status_code == 400
 
     def test_registration2(self):
         """
@@ -30,7 +30,7 @@ class TestRegistration:
         url = BASE_URL + '/registration/'
         file = data[0]['test2']
         response = requests.post(url=url, data=file)
-        assert response.status_code == 200
+        assert response.status_code == 400
 
 
     def test_registration3(self):
@@ -40,7 +40,7 @@ class TestRegistration:
         url = BASE_URL + '/registration/'
         file = data[0]['test3']
         response = requests.post(url=url, data=file)
-        assert response.status_code == 200
+        assert response.status_code == 400
 
     def test_login1(self):
         """
@@ -49,7 +49,7 @@ class TestRegistration:
         url = BASE_URL + '/login/'
         file = data[0]['test4']
         response = requests.post(url=url, data=file)
-        assert response.status_code == 200
+        assert response.status_code == 400
 
     def test_login2(self):
         """
@@ -58,7 +58,7 @@ class TestRegistration:
         url = BASE_URL + '/login/'
         file = data[0]['test5']
         response = requests.post(url=url, data=file)
-        assert response.status_code == 200
+        assert response.status_code == 400
 
     def test_login3(self):
         """
@@ -67,7 +67,7 @@ class TestRegistration:
         url = BASE_URL + '/login/'
         file = data[0]['test6']
         response = requests.post(url=url, data=file)
-        assert response.status_code == 200
+        assert response.status_code == 201
 
 
 if __name__ == '__main__':

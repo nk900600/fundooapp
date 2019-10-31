@@ -1,5 +1,6 @@
 import json
 import logging
+import pdb
 from pdb import set_trace
 
 import jwt
@@ -98,7 +99,11 @@ def label_coll_validator_post(function):
             pass
 
         try:
+
+            # pdb.set_trace()
+            print(request.data['collaborators'])
             collaborators = request.data['collaborators']
+
             if collvalidator(collaborators):
                 smd = {'success': False, 'message': 'email not vaild',
                        'data': []}
@@ -132,7 +137,7 @@ def label_coll_validator_put(function):
             pass
 
         try:
-            collaborators = request.data['coll']
+            collaborators = request.data['collaborators']
             if collvalidator(collaborators):
                 smd = {'success': False, 'message': 'email not vaild',
                        'data': []}
@@ -174,6 +179,7 @@ def collvalidator(collaborators):
         for email in collaborators:
             email_id = User.objects.filter(email=email)
             id = email_id.values()[0]['id']
+        return False
     except Exception:
         logger.error(" collaborators does not exist")
         return True

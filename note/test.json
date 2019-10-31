@@ -40,36 +40,24 @@
            "jnjn"
           ],
           "url": "string",
-          "archive": false,
-          "coll": [
-           2
-          ],
-          "image": "fundoo.png"
+          "archive": false
+
  },
-  "test7": {
-          "user": 1,
-          "title": "hello",
-          "note": "",
-          "label": [
-           1
-          ],
-          "url": "string",
-          "archive": false,
-          "coll": [
-           2
-          ],
-          "image": "fundoo.png"
- },
+  "test7":{
+  "title": "string",
+  "note": "string",
+  "is_archive": true
+
+},
   "test8": {
-     "note_name": "hi",
-     "name": "hi"
+     "name": "japan"
   },
     "test9": {
       "note_name": "defef",
      "name": "ii"
   },
     "test10": {
-     "note_name": "hi",
+
      "name": "hi"
   },
   "test11": {

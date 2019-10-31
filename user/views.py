@@ -7,7 +7,7 @@
  *  @since   30/09/2019
  ******************************************************************************
 """
-
+import datetime
 import json
 from smtplib import SMTPAuthenticationError
 
@@ -25,14 +25,18 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.clickjacking import xframe_options_deny
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
 from jwt import ExpiredSignatureError
+from pyee import BaseEventEmitter
+from pymitter import EventEmitter
 from rest_framework.exceptions import ValidationError
 from rest_framework.generics import GenericAPIView
 import pdb
 
 from django.core.mail import EmailMultiAlternatives
 
+from fundoo.settings import EMAIL_HOST_USER
 from note.decorators import redirect_after_login
 from lib.redis import red
+from lib.emit_emitter import ee
 from lib.token import token_activation, token_validation
 
 from .serializer import RegistrationSerializer, UserSerializer, LoginSerializer, ResetSerializer, EmailSerializer
@@ -121,7 +125,7 @@ class Registrations(GenericAPIView):
                 return HttpResponse(json.dumps(smd), status=400)
 
 
-@method_decorator(redirect_after_login, name='dispatch')
+# @method_decorator(redirect_after_login, name='dispatch')
 class Login(GenericAPIView):
     """
     :param APIView: user request is made from the user
@@ -241,15 +245,11 @@ class ForgotPassword(GenericAPIView):
                         'domain': get_current_site(request).domain,
                         'surl': z[2]
                     })
-                    recipientemail = email
-                    email = EmailMessage(mail_subject, mail_message, to=[recipientemail])
-                    # email.send()
-                    # send_mail('email/hello.tpl', {'user': user}, from_email, [recipientemail])
 
-                    msg = EmailMultiAlternatives(subject="rgrgr", from_email="store@example.com",
-                                                 to=["customer@example.com"], body=mail_message)
-                    msg.attach_alternative(mail_message, "text/html")
-                    msg.send()
+                    recipientemail = email
+
+                    ee.emit('send_email', recipientemail, mail_message)
+
                     response = {
                         'success': True,
                         'message': "check email for vaildation ",
@@ -321,7 +321,8 @@ def reset_password(request, surl):
     except KeyError:
         messages.info(request, 'was not able to sent the email')
         return redirect('/api/forgotpassword')
-    except Exception:
+    except Exception as e:
+        print(e)
         messages.info(request, 'activation link expired')
         return redirect('/api/forgotpassword')
 

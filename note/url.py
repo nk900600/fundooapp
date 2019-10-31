@@ -18,6 +18,6 @@ urlpatterns = [
     path("label", views.LabelsCreate.as_view()),
     path("trash", views.Trash.as_view()),
     path("reminder", views.Reminders.as_view()),
-
+    path("lazy", views.LazyLoading.as_view()),
 
 ]

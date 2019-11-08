@@ -1,8 +1,8 @@
 [{
   "test1":{
-    "username": "nk90600",
-    "email": "niksroad2success@gamilcom",
-    "password": "pankaj"
+    "username": "admin",
+    "email": "niksroad2success@gmail.com",
+    "password": "admin"
 
 },
  "test2":{
@@ -13,13 +13,13 @@
 },
    "test3":{
     "username": "nk90600",
-    "email": "niksroad2successgamilcom",
-    "password": "pankaj"
+    "email": "dddg@gamil.com",
+    "password": "nikhil"
 
 },
    "test4":{
-    "username": "nk90600",
-    "password": "pankaj@007"
+    "username": "admin",
+    "password": "admin"
 
 },
    "test5":{
@@ -28,9 +28,35 @@
 
 },
    "test6":{
-    "username": "admin",
-    "password": "admin"
+    "username": "dgdg",
+    "password": "dgdgdg"
 
+},
+   "test7":{
+    "email": "niksroad2success@gmail.com"
+
+},
+ "test8":{
+    "email": "niksroad2successgmail.com"
+
+},
+   "test9":{
+    "email": ""
+
+},
+   "test10":{
+    "user_reset": "dgdg",
+    "password": "dgdgdg"
+
+},
+   "test11":{
+    "user_reset": "nk90600",
+    "password": "nikhil"
+
+},
+   "test12":{
+    "user_reset": "",
+    "password": ""
 }
 }
 

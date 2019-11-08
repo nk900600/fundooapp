@@ -1,41 +1,36 @@
-
-
-
-version: "3"
+version: '3'
 
 services:
-  sonarqube:
-    image: sonarqube:6.7.1
-    restart: unless-stopped
-    environment:
-      - SONARQUBE_JDBC_USERNAME=sonar
-      - SONARQUBE_JDBC_PASSWORD=v07IGCFCF83Z95NX
-      - SONARQUBE_JDBC_URL=jdbc:postgresql://db:5432/sonarqube
-    ports:
-      - "9000:9000"
-      - "9092:9092"
-    volumes:
-      - sonarqube_conf:/opt/sonarqube/conf
-      - sonarqube_data:/opt/sonarqube/data
-      - sonarqube_extensions:/opt/sonarqube/extensions
-      - sonarqube_bundled-plugins:/opt/sonarqube/lib/bundled-plugins
-
   db:
-    image: postgres:10.1
-    restart: unless-stopped
+    image: mysql:5.7
+    ports:
+      - '3306:3306'
     environment:
-      - POSTGRES_USER=sonar
-      - POSTGRES_PASSWORD=v07IGCFCF83Z95NX
-      - POSTGRES_DB=sonarqube
-    volumes:
-      - sonarqube_db:/var/lib/postgresql
-      # This needs explicit mapping due to https://github.com/docker-library/postgres/blob/4e48e3228a30763913ece952c611e5e9b95c8759/Dockerfile.template#L52
-      - postgresql_data:/var/lib/postgresql/data
+       MYSQL_DATABASE: 'fundoo'
+       MYSQL_USER: 'myprojectuser'
+       MYSQL_PASSWORD: 'Admin@123'
+       MYSQL_ROOT_PASSWORD: 'Admin@123'
 
-volumes:
-  postgresql_data:
-  sonarqube_bundled-plugins:
-  sonarqube_conf:
-  sonarqube_data:
-  sonarqube_db:
-  sonarqube_extensions:
+  web:
+#    image: 7204776016/fundoo-images:djangoimage
+    build: .
+    command:  bash -c " python manage.py migrate && python manage.py loaddata db.json && python manage.py runserver 0.0.0.0:8000"
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+      - redis
+
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfilenginxx
+    depends_on:
+      - web
+    ports:
+      - "80:80"
+
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"

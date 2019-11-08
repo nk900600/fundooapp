@@ -30,7 +30,7 @@ class TestNote:
         """
         test case is created for share note and test with predefined values
         """
-        url = BASE_URL + '/note/'
+        url = BASE_URL + '/notes/'
         file = data[0]['test5']
         response = requests.post(url=url, data=file,headers=headers)
         assert response.status_code == 201
@@ -39,7 +39,7 @@ class TestNote:
         """
         test case is created for share note and test with predefined values
         """
-        url = BASE_URL + '/note/'
+        url = BASE_URL + '/notes/'
         file = data[0]['test6']
         response = requests.post(url=url, data=file,headers=headers)
         assert response.status_code == 400
@@ -48,27 +48,26 @@ class TestNote:
         """
         test case is created for share note and test with predefined values
         """
-        url = BASE_URL + '/note/'
+        url = BASE_URL + '/notes/'
         file = data[0]['test7']
         response = requests.post(url=url, data=file,headers=headers)
-        print(response.text)
         assert response.status_code == 201
 
     def test_note1_get(self):
         """
         test case is created for share note and test with predefined values
         """
-        url = BASE_URL + '/note/'+(data[0]['test11']['note_name'])
+        url = BASE_URL + '/note/1'
         response = requests.get(url=url, headers=headers)
-        assert response.status_code == 404
+        assert response.status_code == 200
 
     def test_note2_get(self):
         """
         test case is created for share note and test with predefined values
         """
-        url = BASE_URL + '/note/' + (data[0]['test12']['note_name'])
+        url = BASE_URL + '/note/2'
         response = requests.get(url=url, headers=headers)
-        assert response.status_code == 404
+        assert response.status_code == 200
 
     def test_note3_get(self):
         """
@@ -82,7 +81,7 @@ class TestNote:
         """
         test case is created for share note and test with predefined values
         """
-        url = BASE_URL + '/note/' + (data[0]['test13']['note_name'])
+        url = BASE_URL + '/note/1'
         response = requests.delete(url=url, headers=headers)
         assert response.status_code == 201
 
@@ -90,17 +89,17 @@ class TestNote:
         """
         test case is created for share note and test with predefined values
         """
-        url = BASE_URL + '/note/' + (data[0]['test12']['note_name'])
+        url = BASE_URL + '/note/5'
         response = requests.delete(url=url, headers=headers)
-        assert response.status_code == 400
+        assert response.status_code == 404
 
     def test_note3_delete(self):
         """
         test case is created for share note and test with predefined values
         """
-        url = BASE_URL + '/note/' + (data[0]['test11']['note_name'])
+        url = BASE_URL + '/note/dfdf'
         response = requests.delete(url=url, headers=headers)
-        assert response.status_code == 400
+        assert response.status_code == 404
 
     def test_note1_put(self):
         """
@@ -109,16 +108,16 @@ class TestNote:
         url = BASE_URL + '/note/' + (data[0]['test13']['note_name'])
         data1= data[0]['test5']
         response = requests.put(url=url,data=data1, headers=headers)
-        assert response.status_code == 200
+        assert response.status_code == 404
 
     def test_note2_put(self):
         """
         test case is created for share note and test with predefined values
         """
-        url = BASE_URL + '/note/' + (data[0]['test12']['note_name'])
-        data1 = data[0]['test5']
+        url = BASE_URL + '/note/2'
+        data1 = data[0]['test7']
         response = requests.put(url=url, data=data1, headers=headers)
-        assert response.status_code == 404
+        assert response.status_code == 200
 
     def test_note3_put(self):
         """
@@ -132,6 +131,34 @@ class TestNote:
 
 class TestLabelPut:
 
+    def test_label_post1(self):
+        """
+        test case is created for share note and test with predefined values
+        """
+
+        url = BASE_URL + '/label'
+        data1 = data[0]['test88']
+        response = requests.post(url=url, data=data1, headers=headers)
+        assert response.status_code == 201
+
+    def test_label_post2(self):
+        """
+        test case is created for share note and test with predefined values
+        """
+        url = BASE_URL + '/label'
+        file = data[0]['test89']
+        response = requests.post(url=url, data=json.dumps(file), headers=headers)
+        assert response.status_code == 404
+
+    def test_label_post3(self):
+        """
+        test case is created for share note and test with predefined values
+        """
+        url = BASE_URL + '/label'
+        file = data[0]['test90']
+        response = requests.post(url=url, data=file, headers=headers)
+        assert response.status_code == 201
+
     def test_label_put1(self):
         """
         test case is created for share note and test with predefined values
@@ -140,18 +167,16 @@ class TestLabelPut:
         url = BASE_URL + '/label/6'
         data1 = data[0]['test8']
         response = requests.put(url=url, data=data1, headers=headers)
-        print(response.text)
-        assert response.status_code == 200
+        assert response.status_code == 404
 
     def test_label_put2(self):
         """
         test case is created for share note and test with predefined values
         """
-        url = BASE_URL + '/label/' + data[0]['test9']['note_name']
-        file = data[0]['test9']
+        url = BASE_URL + '/label/2'
+        file = data[0]['test90']
         response = requests.put(url=url, data=json.dumps(file), headers=headers)
-        print(response.text)
-        assert response.status_code == 404
+        assert response.status_code == 200
 
     def test_label_put3(self):
         """
@@ -160,7 +185,7 @@ class TestLabelPut:
         url = BASE_URL + '/label/5'
         file = data[0]['test10']
         response = requests.put(url=url, data=file, headers=headers)
-        assert response.status_code == 200
+        assert response.status_code == 404
 
     def test_label_get1(self):
         """

@@ -14,12 +14,6 @@ class ShareSerializer(serializers.ModelSerializer):
     class Meta:
         model = Notes
         fields = ['title', 'note']
-#
-
-class ArchiveSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Notes
-        fields = ['archive']
 
 
 class LabelSerializer(serializers.ModelSerializer):

@@ -15,12 +15,14 @@ import django
 import jwt
 from django.conf import settings
 from django.contrib import messages
+from django.contrib.auth import login
 from django.contrib.auth.models import User, auth
 from django.contrib.sites.shortcuts import get_current_site
 from django.core.mail import EmailMessage
 from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.utils.decorators import method_decorator
 from django.views.decorators.clickjacking import xframe_options_deny
 from django.views.decorators.csrf import csrf_protect, csrf_exempt
@@ -38,6 +40,7 @@ from note.decorators import redirect_after_login
 from lib.redis import red
 from lib.emit_emitter import ee
 from lib.token import token_activation, token_validation
+from note.utils import logger
 
 from .serializer import RegistrationSerializer, UserSerializer, LoginSerializer, ResetSerializer, EmailSerializer
 from django.core.validators import validate_email
@@ -77,24 +80,27 @@ class Registrations(GenericAPIView):
 
         try:
             validate_email(email)
-        except Exception:
+        except Exception as e:
             smd['message'] = "please enter vaild email address"
+            logger.error("error: %s while as email entered was not a vaild email address", str(e))
             return HttpResponse(json.dumps(smd), status=400)
 
         # user input is checked
         if username == "" or email == "" or password == "":
             smd['message'] = "one of the details missing"
+            logger.error("one of the details missing logging in")
             return HttpResponse(json.dumps(smd), status=400)
 
         # if email exists it will show error message
         elif User.objects.filter(email=email).exists():
             smd['message'] = "email address is already registered "
+            logger.error("email address is already registered  while logging in")
             return HttpResponse(json.dumps(smd), status=400)
 
         else:
             try:
                 user_created = User.objects.create_user(username=username, email=email, password=password,
-                                                        is_active=False)
+                                                        is_active=True)
                 user_created.save()
 
                 # user is unique then we will send token to his/her email for validation
@@ -107,8 +113,9 @@ class Registrations(GenericAPIView):
                     mail_subject = "Activate your account by clicking below link"
                     mail_message = render_to_string('user/email_validation.html', {
                         'user': user_created.username,
-                        'domain': get_current_site(request).domain,
-                        'surl': z[2]
+                        'domain':     request.build_absolute_uri(
+                        reverse('reset_password', kwargs={'token': z[2]})),
+                        # 'surl': z[2]
                     })
                     recipient_email = user_created.email
                     email = EmailMessage(mail_subject, mail_message, to=[recipient_email])
@@ -118,10 +125,12 @@ class Registrations(GenericAPIView):
                         'message': 'please check the mail and click on the link  for validation',
                         'data': [token],
                     }
+                    logger.info("email was sent to %s email address ", username)
                     return HttpResponse(json.dumps(smd), status=201)
-            except Exception:
+            except Exception as e:
                 smd["success"] = False
                 smd["message"] = "username already taken"
+                logger.error("error: %s while loging in ", str(e))
                 return HttpResponse(json.dumps(smd), status=400)
 
 
@@ -140,36 +149,38 @@ class Login(GenericAPIView):
     @csrf_exempt
     def post(self, request):
 
-        username = request.data['username']
-        password = request.data['password']
         smd = {
             'success': False,
             'message': "not logged in ",
             'data': []
         }
-        # validation is done
-        if username == "" or password == "":
-            smd['message'] = 'one or more fields is empty'
-            return HttpResponse(json.dumps(smd), status=400)
-
-        user = auth.authenticate(username=username, password=password)
-        # if user is not none then we will generate token
-        if user is not None:
-
-            token = token_validation(username, password)
-
-            # red = Redis()
-            red.set(user.username, token)
-            smd = {
-                'success': True,
-                'message': "successfully logged",
-                'data': [token],
-            }
-
-            return HttpResponse(json.dumps(smd), status=201)
-
-        else:
+        try:
+            username = request.data['username']
+            password = request.data['password']
+            # validation is done
+            if username == "" or password == "":
+                smd['message'] = 'one or more fields is empty'
+                return HttpResponse(json.dumps(smd), status=400)
+            user = auth.authenticate(username=username, password=password)
+            auth.login(request, user)
+            # if user is not none then we will generate token
+            if user is not None:
+                token = token_validation(username, password)
+                # red = Redis()
+                red.set(user.username, token)
+                smd = {
+                    'success': True,
+                    'message': "successfully logged",
+                    'data': [token],
+                }
+                return HttpResponse(json.dumps(smd), status=201)
+            else:
+                smd['message'] = 'invaild credentials'
+                logger.error("invaild credentials for username: %s ",username)
+                return HttpResponse(json.dumps(smd), status=400)
+        except Exception as e:
             smd['message'] = 'invaild credentials'
+            logger.error("error: %s while loging in ", str(e))
             return HttpResponse(json.dumps(smd), status=400)
 
 
@@ -183,13 +194,14 @@ class Logout(GenericAPIView):
         """
         smd = {"success": False, "message": "not a vaild user", "data": []}
         try:
-
             user = request.user
             # red = Redis()
             red.delete(user.username)
             smd = {"success": True, "message": " logged out", "data": []}
+            logger.info("%s looged out succesfully ", user)
             return HttpResponse(json.dumps(smd), status=200)
         except Exception:
+            logger.error("something went wrong while logging out")
             return HttpResponse(json.dumps(smd), status=400)
 
 
@@ -337,9 +349,9 @@ class ResetPassword(GenericAPIView):
 
     # @csrf_protect
     def post(self, request, user_reset):
+        # pdb.set_trace()
+        password = request.data['password']
 
-        password1 = request.data['password']
-        password2 = request.data['password']
 
         smd = {
             'success': False,
@@ -351,11 +363,11 @@ class ResetPassword(GenericAPIView):
             smd['message'] = 'not a vaild user'
             return HttpResponse(json.dumps(smd), status=400)
 
-        elif password1 == "" or password2 == "":
+        elif password == "":
             smd['message'] = 'one of the fields are empty'
-            return HttpResponse(json.dumps(smd), status=400)
+            return HttpResponse(json.dumps(smd), status=404)
 
-        elif len(password1) <= 4 or len(password2) <= 4:
+        elif len(password) <= 4:
             smd['message'] = 'password should be 4 or  more than 4 character'
             return HttpResponse(json.dumps(smd), status=400)
 
@@ -363,7 +375,7 @@ class ResetPassword(GenericAPIView):
             try:
 
                 user = User.objects.get(username=user_reset)
-                user.set_password(password1)
+                user.set_password(password)
                 # here we will save the user password in the database
                 user.save()
 

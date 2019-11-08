@@ -23,7 +23,7 @@ class Notes(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='user')
     title = models.CharField(max_length=500, blank=True)
     note = models.CharField(max_length=500, )
-    image = models.ImageField(max_length=500, blank=True, null=True, upload_to="image")
+    image = models.ImageField(max_length=500, blank=True, null=True, upload_to="media")
     is_archive = models.BooleanField("is_archived", default=False)
     is_trashed = models.BooleanField("delete_note", default=False)
     label = models.ManyToManyField(Label, related_name="label", blank=True)

@@ -27,10 +27,9 @@
   "test5":
       {
           "title": "hello",
-          "note": "hnhn",
+          "note": "hnhn"
 
-          "url": "http://www.google.com",
-          "archive": false
+
       },
   "test6": {
           "user": 1,
@@ -49,8 +48,19 @@
   "is_archive": true
 
 },
+
   "test8": {
      "name": "japan"
+  },
+
+  "test88": {
+     "name": "japan"
+  },
+  "test89": {
+     "name": ""
+  },
+  "test90": {
+     "name": "tokyo"
   },
     "test9": {
       "note_name": "defef",

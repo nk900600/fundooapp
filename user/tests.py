@@ -21,7 +21,7 @@ class TestRegistration:
         url = BASE_URL + '/registration/'
         file = data[0]['test1']
         response = requests.post(url=url, data=file)
-        assert response.status_code == 400
+        assert response.status_code == 201
 
     def test_registration2(self):
         """
@@ -40,7 +40,7 @@ class TestRegistration:
         url = BASE_URL + '/registration/'
         file = data[0]['test3']
         response = requests.post(url=url, data=file)
-        assert response.status_code == 400
+        assert response.status_code == 201
 
     def test_login1(self):
         """
@@ -49,7 +49,7 @@ class TestRegistration:
         url = BASE_URL + '/login/'
         file = data[0]['test4']
         response = requests.post(url=url, data=file)
-        assert response.status_code == 400
+        assert response.status_code == 201
 
     def test_login2(self):
         """
@@ -67,7 +67,16 @@ class TestRegistration:
         url = BASE_URL + '/login/'
         file = data[0]['test6']
         response = requests.post(url=url, data=file)
-        assert response.status_code == 201
+        assert response.status_code == 400
+
+    def test_reset_password_1(self):
+        """
+        test case is created for login and test with predefined values
+        """
+        url = BASE_URL + '/resetpassword/'+data[0]['test12']['user_reset']
+        file = data[0]['test12']['password']
+        response = requests.post(url=url, data=file)
+        assert response.status_code == 404
 
 
 if __name__ == '__main__':

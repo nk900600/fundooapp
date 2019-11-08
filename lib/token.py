@@ -7,6 +7,7 @@
  *  @since   30/09/2019
  ******************************************************************************
 """
+import datetime
 
 import jwt
 import requests
@@ -22,7 +23,8 @@ def token_activation(username, password):
 
     data = {
         'username': username,
-        'password': password
+        'password': password,
+        'exp': datetime.datetime.now()+datetime.timedelta(days=2)
     }
     token = jwt.encode(data, SECRET_KEY, algorithm="HS256").decode('utf-8')
     return token
@@ -34,12 +36,11 @@ def token_validation(username, password):
     :param password: takes password
     :return: will return token
     """
+
     data = {
         'username': username,
         'password': password
     }
     tokson = requests.post(AUTH_ENDPOINT, data=data)
-
     token = tokson.json()['access']
-    print(token)
     return token

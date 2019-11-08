@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -10,40 +12,83 @@
     <title>Title</title>
 </head>
 <body>
-{% for a in contacts %}
-     <div class="container" style="margin-top:30px ">
-        <div class="row" align="center">
-            <div class="col-8 offset-2">
-                <h5>{{ a }}</h5>
-            </div>
-        </div>
+
+
+<div class="container" style="margin-top:30px ">
+    <div class="row" align="center">
+        <div class="col-8 offset-2">
+                <table class="table table-bordered">
+                  <thead>
+                            <tr>    <th> Id</th>
+                                    <th>Title</th>
+                                    <th>Note</th>
+                                    <th>Url</th>
+
+                            </tr>
+                  </thead>
+                  <tbody>
+                    {% for note in notes %}
+                      <tr>
+                       <td>{{ note.id }}</td>
+                        <td>{{ note.title }}</td>
+                        <td>{{ note.note }}</td>
+                        <td>{{ note.url }}</td>
+
+                      </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+{##}
+                {% if notes.has_other_pages %}
+                        {% if notes.has_previous %}
+                                  <a class="btn btn-outline-info mb-4" href="?page=1">First</a>
+                        <a class="btn btn-outline-info mb-4" href="?page={{ notes.previous_page_number }}">Previous</a>
+                      {% endif %}
+
+                      {% for num in notes.paginator.page_range %}
+                        {% if notes.number == num %}
+                          <a class="btn btn-info mb-4" href="?page={{ num }}">{{ num }}</a>
+                        {% elif num > notes.number|add:'-3' and num < notes.number|add:'3' %}
+                          <a class="btn btn-outline-info mb-4" href="?page={{ num }}">{{ num }}</a>
+                        {% endif %}
+                      {% endfor %}
+
+                      {% if notes.has_next %}
+                        <a class="btn btn-outline-info mb-4" href="?page={{ notes.next_page_number }}">Next</a>
+                        <a class="btn btn-outline-info mb-4" href="?page={{ notes.paginator.num_pages }}">Last</a>
+                      {% endif %}
+        {% endif %}
+{##}
+{#  <div class="infinite-container">#}
+{#    {% for note in notes %}#}
+{#      <div class="infinite-item">{{ note }}</div>#}
+{#    {% endfor %}#}
+{#  </div>#}
+{##}
+{#  {% if notes.has_next %}#}
+{#    <a class="infinite-more-link" href="?page={{ notes.next_page_number }}">More</a>#}
+{#  {% endif %}#}
+{##}
+{#  <div class="loading" style="display: none;">#}
+{#    Loading...#}
+{#  </div>#}
+{##}
+{#  <script>#}
+{#    var infinite = new Waypoint.Infinite({#}
+{#      element: $('.infinite-container')[0],#}
+{#      onBeforePageLoad: function () {#}
+{#        $('.loading').show();#}
+{#      },#}
+{#      onAfterPageLoad: function ($items) {#}
+{#        $('.loading').hide();#}
+{#      }#}
+{#    });#}
+{#  </script>#}
+
+</div>
     </div>
-
-{% endfor %}
-
-{% for contact in contacts %}
-    {# Each "contact" is a Contact model object. #}
-    {{ contact.full_name|upper }}<br>
-    ...
-{% endfor %}
-
-<div class="pagination">
-    <span class="step-links">
-        {% if contacts.has_previous %}
-            <a href="?page=1">&laquo; first</a>
-            <a href="?page={{ contacts.previous_page_number }}">previous</a>
-        {% endif %}
-
-        <span class="current">
-            Page {{ contacts.number }} of {{ contacts.paginator.num_pages }}.
-        </span>
-
-        {% if contacts.has_next %}
-            <a href="?page={{ contacts.next_page_number }}">next</a>
-            <a href="?page={{ contacts.paginator.num_pages }}">last &raquo;</a>
-        {% endif %}
-    </span>
 </div>
 
 </body>
 </html>
+

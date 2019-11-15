@@ -1,224 +1,356 @@
 import json
+
+import pytest
 import requests
+from django.contrib.auth.models import User
+
 from fundoo.settings import BASE_URL, TEST_TOKEN
+from django.test import Client, override_settings
 
-with open("test.json") as f:
-    data = json.load(f)
-headers = {
-            'Content_Type': "application/json",
-            'Authorization': TEST_TOKEN
-}
+from lib.token import token_validation
+#
+# # with open("test.json") as f:
+# #     data = json.load(f)
+#
+header = {
+    'HTTP_AUTHORIZATION': "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9"
+                          ".eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNTczODk0MjkyLCJqdGkiOiI1MzAzNTViYWU5Nzg0MWM1OWVmMWQxMWI4NzkxMmUyYSIsInVzZXJfaWQiOjF9.bXAAC45gOD-XSjwxf7iGw7IsfwQEjMj78Nh-jNbwdEo"}
+#
 
-
-class TestLogin:
-    """
-    test case is created and test with predefined values
-    """
-    def test_login(self):
-        url = BASE_URL + '/login/'
-        file = data[0]['test14']
-        response = requests.post(url=url, data=file)
-        assert response.status_code == 201
-
-
-class TestNote:
-    """
-    test case is created and test with predefined values
-    """
-
-    def test_note1_post(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/notes/'
-        file = data[0]['test5']
-        response = requests.post(url=url, data=file,headers=headers)
-        assert response.status_code == 201
-
-    def test_note2_post(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/notes/'
-        file = data[0]['test6']
-        response = requests.post(url=url, data=file,headers=headers)
-        assert response.status_code == 400
-
-    def test_note3_post(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/notes/'
-        file = data[0]['test7']
-        response = requests.post(url=url, data=file,headers=headers)
-        assert response.status_code == 201
-
-    def test_note1_get(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/note/1'
-        response = requests.get(url=url, headers=headers)
-        assert response.status_code == 200
-
-    def test_note2_get(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/note/2'
-        response = requests.get(url=url, headers=headers)
-        assert response.status_code == 200
-
-    def test_note3_get(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/note/' + (data[0]['test13']['note_name'])
-        response = requests.get(url=url, headers=headers)
-        assert response.status_code == 200
-
-    def test_note1_delete(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/note/1'
-        response = requests.delete(url=url, headers=headers)
-        assert response.status_code == 201
-
-    def test_note2_delete(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/note/5'
-        response = requests.delete(url=url, headers=headers)
-        assert response.status_code == 404
-
-    def test_note3_delete(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/note/dfdf'
-        response = requests.delete(url=url, headers=headers)
-        assert response.status_code == 404
-
-    def test_note1_put(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/note/' + (data[0]['test13']['note_name'])
-        data1= data[0]['test5']
-        response = requests.put(url=url,data=data1, headers=headers)
-        assert response.status_code == 404
-
-    def test_note2_put(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/note/2'
-        data1 = data[0]['test7']
-        response = requests.put(url=url, data=data1, headers=headers)
-        assert response.status_code == 200
-
-    def test_note3_put(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/note/' + (data[0]['test11']['note_name'])
-        data1 = data[0]['test5']
-        response = requests.put(url=url, data=data1, headers=headers)
-        assert response.status_code == 404
-
-
-class TestLabelPut:
-
-    def test_label_post1(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-
-        url = BASE_URL + '/label'
-        data1 = data[0]['test88']
-        response = requests.post(url=url, data=data1, headers=headers)
-        assert response.status_code == 201
-
-    def test_label_post2(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/label'
-        file = data[0]['test89']
-        response = requests.post(url=url, data=json.dumps(file), headers=headers)
-        assert response.status_code == 404
-
-    def test_label_post3(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/label'
-        file = data[0]['test90']
-        response = requests.post(url=url, data=file, headers=headers)
-        assert response.status_code == 201
-
-    def test_label_put1(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-
-        url = BASE_URL + '/label/6'
-        data1 = data[0]['test8']
-        response = requests.put(url=url, data=data1, headers=headers)
-        assert response.status_code == 404
-
-    def test_label_put2(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/label/2'
-        file = data[0]['test90']
-        response = requests.put(url=url, data=json.dumps(file), headers=headers)
-        assert response.status_code == 200
-
-    def test_label_put3(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/label/5'
-        file = data[0]['test10']
-        response = requests.put(url=url, data=file, headers=headers)
-        assert response.status_code == 404
-
-    def test_label_get1(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/label'
-        response = requests.get(url=url,  headers=headers)
-        assert response.status_code == 200
-
-    def test_label_get2(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/label' + str(data[0]['test13']['note_name'])
-        response = requests.get(url=url,  headers=headers)
-        assert response.status_code == 404
-
-
-class TestRemainder:
-    def test_get1(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/reminder'
-        response = requests.get(url=url, headers=headers)
-        assert response.status_code == 200
+from django.test import TestCase
+from django.urls import reverse
 
 #
-class TestArchive:
-    def test_get1(self):
-        """
-        test case is created for share note and test with predefined values
-        """
-        url = BASE_URL + '/archive'
-        response = requests.get(url=url, headers=headers)
-        assert response.status_code == 200
+from note.models import Notes, Label
+import unittest
+
+
+class ModelsTest(TestCase):
+    fixtures = ['test_fundoo_db']
+
+    def test_note_string_representation1(self):
+        entry = Notes(note="My entry title")
+        self.assertEqual(str(entry), entry.note)
+
+    def test_note_string_representation2(self):
+        entry = Notes(title="My entry title")
+        self.assertEqual(str(entry), "")
+
+    def test_note_equal1(self):
+        note1 = Notes(note="My entry note")
+        note2 = Notes(note="My entry note")
+        self.assertTrue(note1 == note2, True)
+
+    def test_note_equal2(self):
+        note1 = Notes(note="My first note")
+        note2 = Notes(note="My second note ")
+        self.assertFalse(note1 == note2, True)
+
+    def test_note_isinstance1(self):
+        user1 = User(username="nikhil")
+        note2 = Notes(note="My second note ")
+        self.assertEqual(user1 == note2, False)
+
+    def test_note_isinstance2(self):
+        user1 = User(username="nikhil")
+        note2 = Notes(note="My second note ")
+        self.assertFalse(user1 == note2, "hello")
+
+    def test_note_verbose_name_plural1(self):
+        self.assertEqual(str(Notes._meta.verbose_name_plural), "Notes")
+
+    def test_note_verbose_name_plural2(self):
+        self.assertNotEqual(str(Notes._meta.verbose_name_plural), "testing")
+
+    def test_note_verbose_name1(self):
+        self.assertEqual(str(Notes._meta.verbose_name), "Note")
+
+    def test_note_verbose_name2(self):
+        self.assertNotEqual(str(Notes._meta.verbose_name), "testing")
+
+    ############################################################################
+
+    def test_label_string_representation1(self):
+        entry = Label(name="My name")
+        self.assertEqual(str(entry), entry.name)
+
+    def test_label_string_representation2(self):
+        entry = Label(name="My name")
+        self.assertNotEqual(str(entry), "")
+
+    def test_label_equal1(self):
+        Label1 = Label(name="My entry label")
+        Label2 = Label(name="My entry label")
+        self.assertTrue(Label1 == Label2, True)
+
+    def test_label_equal2(self):
+        Label1 = Label(name="My first label")
+        Label2 = Label(name="My second label ")
+        self.assertFalse(Label1 == Label2, True)
+
+    def test_label_isinstance1(self):
+        user1 = User(username="nikhil")
+        Label2 = Label(name="My second label ")
+        self.assertEqual(user1 == Label2, False)
+
+    def test_label_isinstance2(self):
+        user1 = User(username="nikhil")
+        Label2 = Label(name="My second label ")
+        self.assertFalse(user1 == Label2, "hello")
+
+    def test_label_verbose_name_plural1(self):
+        self.assertEqual(str(Label._meta.verbose_name_plural), "labels")
+
+    def test_label_verbose_name_plural2(self):
+        self.assertNotEqual(str(Label._meta.verbose_name_plural), "testing")
+
+    def test_label_verbose_name1(self):
+        self.assertEqual(str(Label._meta.verbose_name), "label")
+
+    def test_label_verbose_name2(self):
+        self.assertNotEqual(str(Label._meta.verbose_name), "testing")
+
+
+class NotesTest(TestCase):
+    fixtures = ['test_fundoo_db']
+
+    def test_note_getall1(self):
+        url = BASE_URL + reverse('notes')
+        resp = self.client.get(url, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_note_get1(self):
+        url = BASE_URL + reverse('note_update', args=[1])
+        resp = self.client.get(url, content_type='application/json', **header)
+        # print(resp.META)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_note_get2(self):
+        url = BASE_URL + reverse('note_update', args=["fbv"])
+        resp = self.client.get(url, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_note_get3(self):
+        url = BASE_URL + reverse('note_update', args=[1000])
+        resp = self.client.get(url, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_note_post1(self):
+        url = BASE_URL + reverse('notes')
+        data = {"title": "hii", "note": "heelo", "label": ["hheelo"]}
+        resp = self.client.post(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 400)
+
+    def test_note_post2(self):
+        url = BASE_URL + reverse('notes')
+        data = {"title": "hii", "note": "heelo", "label": ["japan"]}
+        resp = self.client.post(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 400)
+
+    def test_note_post23(self):
+        url = BASE_URL + reverse('notes')
+        data = {"title": "hii", "note": "heelo", "is_archive": 'true'}
+        resp = self.client.post(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 201)
+
+    def test_note_post3(self):
+        url = BASE_URL + reverse('notes')
+        data = {"title": "hii", "note": "heelo", "collaborators": ["nk90600@gmail.com"]}
+        resp = self.client.post(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 201)
+
+    def test_note_post5(self):
+        url = BASE_URL + reverse('notes')
+        data = {"title": "hii", "efdef": "heelo", "collaborators": ["nk90600@gmail.com"]}
+        resp = self.client.post(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 201)
+
+    def test_note_post4(self):
+        url = BASE_URL + reverse('notes')
+        data = {"title": "hii", "note": "heelo", "url": "google.com"}
+        resp = self.client.post(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 400)
+
+    def test_note_put1(self):
+        url = BASE_URL + reverse('note_update', args=[1])
+        data = {"title": "hii", "note": "heelo", "url": "google.com"}
+        resp = self.client.put(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 400)
+
+    def test_note_put11(self):
+        url = BASE_URL + reverse('note_update', args=[1])
+        data = {"title": "hii", "note": "heelo", "is_archive": "true"}
+        resp = self.client.put(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_note_put10(self):
+        url = BASE_URL + reverse('note_update', args=[1])
+        data = {"title": "hii", "note": "heelo", "is_trashed": "true"}
+        resp = self.client.put(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_note_put6(self):
+        url = BASE_URL + reverse('note_update', args=[1])
+        data = {"title": "hii", "wfwfwfwf": "heelo", "url": "google.com"}
+        resp = self.client.put(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 400)
+
+    def test_note_put5(self):
+        url = BASE_URL + reverse('note_update', args=[1])
+        data = {"title": "hii", "note": "heelo","collaborators": ["nk90600@gmail.com"]}
+        resp = self.client.put(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_note_put2(self):
+        url = BASE_URL + reverse('note_update', args=[1])
+        data = {"title": "hii", "note": "heelo", }
+        resp = self.client.put(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_note_put3(self):
+        url = BASE_URL + reverse('note_update', args=[1])
+        data = {"title": "hii", "note": "heelo", "label": ["google.com"]}
+        resp = self.client.put(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 400)
+
+    def test_note_delete1(self):
+        url = BASE_URL + reverse('note_update', args=[500])
+        resp = self.client.delete(url, content_type='application/json', **header)
+        # print(resp.META)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_note_delete2(self):
+        url = BASE_URL + reverse('note_update', args=[1])
+        resp = self.client.delete(url, content_type='application/json', **header)
+        # print(resp.META)
+        self.assertEqual(resp.status_code, 201)
+
+    def test_note_delete3(self):
+        url = BASE_URL + reverse('note_update', args=[1])
+        resp = self.client.delete(url, content_type='application/json', **header)
+        # print(resp.META)
+        self.assertEqual(resp.status_code, 201)
+
+    def test_label_get1(self):
+        url = BASE_URL + reverse('label_get')
+        resp = self.client.get(url, content_type='application/json', **header)
+        # print(resp.META)
+        self.assertEqual(resp.status_code, 200)
+
+    # def test_label_get2(self):
+    #     url = BASE_URL + reverse('label_get')
+    #     resp = self.client.get(url, content_type='application/json', **header)
+    #     # print(resp.META)
+    #     self.assertEqual(resp.status_code, 200)
+    #
+    # def test_label_get3(self):
+    #     url = BASE_URL + reverse('label_get')
+    #     resp = self.client.get(url, content_type='application/json', **header)
+    #     # print(resp.META)
+    #     self.assertEqual(resp.status_code, 200)
+
+    def test_label_post1(self):
+        url = BASE_URL + reverse('label_get')
+        data = {"name": "", }
+        resp = self.client.post(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 400)
+
+    def test_label_post2(self):
+        url = BASE_URL + reverse('label_get')
+        data = {"name": "japan", }
+        resp = self.client.post(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 400)
+
+    def test_label_post4(self):
+        url = BASE_URL + reverse('label_get')
+        data = {"name": "hiiii", }
+        resp = self.client.post(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 201)
+
+    def test_label_post3(self):
+        url = BASE_URL + reverse('label_get')
+        data = {"name": "e", }
+        resp = self.client.post(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 400)
+
+    def test_label_put1(self):
+        url = BASE_URL + reverse('label_update', args=[8])
+        data = {"name": "japan", }
+        resp = self.client.put(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_label_put2(self):
+        url = BASE_URL + reverse('label_update', args=[80])
+        data = {"name": "japan", }
+        resp = self.client.put(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_label_put3(self):
+        url = BASE_URL + reverse('label_update', args=["gfgfbh"])
+        data = {"name": "japan", }
+        resp = self.client.put(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_label_delete1(self):
+        url = BASE_URL + reverse('label_update', args=[80])
+        resp = self.client.delete(url, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_label_delete2(self):
+        url = BASE_URL + reverse('label_update', args=["gnf"])
+        resp = self.client.delete(url, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_label_delete3(self):
+        url = BASE_URL + reverse('label_update', args=[9])
+        resp = self.client.delete(url, content_type='application/json', **header)
+        # print(resp.META)
+        self.assertEqual(resp.status_code, 404)
+
+    def test_reminders(self):
+        url = BASE_URL + reverse('reminder')
+        resp = self.client.get(url, content_type='application/json', **header)
+        # print(resp.META)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_archive(self):
+        url = BASE_URL + reverse('archive')
+        resp = self.client.get(url, content_type='application/json', **header)
+        # print(resp.META)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_trashed(self):
+        url = BASE_URL + reverse('trash')
+        resp = self.client.get(url, content_type='application/json', **header)
+        # print(resp.META)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_note_share1(self):
+        url = BASE_URL + reverse('note_share')
+        data = {"title": "japan", "note": "hi"}
+        resp = self.client.post(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 302)
+
+    def test_note_share2(self):
+        url = BASE_URL + reverse('note_share')
+        data = {"note": "japan", }
+        resp = self.client.post(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 400)
+
+    def test_celery(self):
+        url = BASE_URL + reverse('celery')
+        resp = self.client.get(url, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_search1(self):
+        url = BASE_URL + reverse('search')
+        data = {"title": "japan", }
+        resp = self.client.post(url, data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 200)
+
+    def test_search2(self):
+        url = BASE_URL + reverse('search')
+        data = {"note": "japan", }
+        resp = self.client.post(url,data, content_type='application/json', **header)
+        self.assertEqual(resp.status_code, 400)
+#

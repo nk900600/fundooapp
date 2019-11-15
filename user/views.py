@@ -35,18 +35,20 @@ import pdb
 
 from django.core.mail import EmailMultiAlternatives
 
-from fundoo.settings import EMAIL_HOST_USER
+from fundoo.settings import EMAIL_HOST_USER, file_handler
 from note.decorators import redirect_after_login
 from lib.redis import red
 from lib.emit_emitter import ee
 from lib.token import token_activation, token_validation
-from note.utils import logger
 
 from .serializer import RegistrationSerializer, UserSerializer, LoginSerializer, ResetSerializer, EmailSerializer
 from django.core.validators import validate_email
 from django_short_url.views import get_surl
 from django_short_url.models import ShortURL
-
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+logger.addHandler(file_handler)
 
 def home(request):
     """
@@ -68,9 +70,11 @@ class Registrations(GenericAPIView):
 
     def post(self, request):
 
+        # pdb.set_trace()
         username = request.data['username']
         email = request.data['email']
         password = request.data['password']
+
 
         smd = {
             'success': False,
@@ -113,9 +117,8 @@ class Registrations(GenericAPIView):
                     mail_subject = "Activate your account by clicking below link"
                     mail_message = render_to_string('user/email_validation.html', {
                         'user': user_created.username,
-                        'domain':     request.build_absolute_uri(
-                        reverse('reset_password', kwargs={'token': z[2]})),
-                        # 'surl': z[2]
+                        'domain': get_current_site(request).domain,
+                        'surl': z[2]
                     })
                     recipient_email = user_created.email
                     email = EmailMessage(mail_subject, mail_message, to=[recipient_email])
@@ -134,6 +137,7 @@ class Registrations(GenericAPIView):
                 return HttpResponse(json.dumps(smd), status=400)
 
 
+# @method_decorator(csrf_exempt, name='dispatch')
 # @method_decorator(redirect_after_login, name='dispatch')
 class Login(GenericAPIView):
     """
@@ -146,7 +150,7 @@ class Login(GenericAPIView):
     #     return render(request, 'user/login.html')
 
     # @xframe_options_deny
-    @csrf_exempt
+    # @csrf_exempt
     def post(self, request):
 
         smd = {
@@ -162,7 +166,7 @@ class Login(GenericAPIView):
                 smd['message'] = 'one or more fields is empty'
                 return HttpResponse(json.dumps(smd), status=400)
             user = auth.authenticate(username=username, password=password)
-            auth.login(request, user)
+            # auth.login(request, user)
             # if user is not none then we will generate token
             if user is not None:
                 token = token_validation(username, password)
@@ -235,7 +239,7 @@ class ForgotPassword(GenericAPIView):
             try:
                 validate_email(email)
             except Exception:
-                return HttpResponse(json.dumps(response))
+                return HttpResponse(json.dumps(response) ,status=400)
             try:
                 # pdb.set_trace()
                 user = User.objects.filter(email=email)
@@ -305,6 +309,9 @@ def activate(request, surl):
     except ExpiredSignatureError:
         messages.info(request, 'activation link expired')
         return redirect('/api/registration')
+    except Exception:
+        messages.info(request, 'activation link expired')
+        return redirect('/api/registration')
 
 
 def reset_password(request, surl):
@@ -361,11 +368,11 @@ class ResetPassword(GenericAPIView):
         # password validation is done in this form
         if user_reset is None:
             smd['message'] = 'not a vaild user'
-            return HttpResponse(json.dumps(smd), status=400)
+            return HttpResponse(json.dumps(smd), status=404)
 
         elif password == "":
             smd['message'] = 'one of the fields are empty'
-            return HttpResponse(json.dumps(smd), status=404)
+            return HttpResponse(json.dumps(smd), status=400)
 
         elif len(password) <= 4:
             smd['message'] = 'password should be 4 or  more than 4 character'

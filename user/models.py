@@ -17,15 +17,21 @@ class Registration(models.Model):
     email = models.EmailField()
     password = models.CharField(max_length=100)
 
-    if name == "" or username == "" or email == "" or password == "":
-        raise forms.ValidationError(" one of the above field is empty")
-
     def __str__(self):
-        return str(self.name)
+        return self.name
+
+    def __eq__(self, other):
+        if isinstance(other, Registration):
+            return self.name == other.name
+        return "cannot equalize different classes"
+
+    def __repr__(self):
+        return "Note({!r},{!r},{!r})".format(self.name, self.username, self.email)
+
 
     class Meta:
         """
         name is given which will be displayed in admin page
         """
         verbose_name = 'user detail'
-        verbose_name_plural = 'user details '
+        verbose_name_plural = 'user details'

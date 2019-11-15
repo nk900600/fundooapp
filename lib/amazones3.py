@@ -24,7 +24,7 @@ class AmazoneS3:
         :return: True if file was uploaded, else False
         """
         # If S3 object_name was not specified, use file_name
-        if object_name is None:
+        if object_name is None:  # pragma: cover
             object_name = file_name
 
         # Upload the file

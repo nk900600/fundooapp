@@ -1,6 +1,8 @@
 from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
 from pyee import BaseEventEmitter
 
+from fundoo import settings
 from fundoo.settings import EMAIL_HOST_USER
 
 ee = BaseEventEmitter()
@@ -9,9 +11,7 @@ ee = BaseEventEmitter()
 @ee.on('send_email')
 def send_email(recipientemail, mail_message):
 
-    subject, from_email, to = 'hello', 'nk90600@gmail.com', recipientemail
-    text_content = 'This is an important message.'
-    html_content = '<p>This is an <strong>important</strong> message.</p>'
-    msg = EmailMultiAlternatives(subject, text_content, from_email, [to])
-    msg.attach_alternative(html_content, "text/html")
+    subject, from_email, to = 'greeting from fundoo ', settings.EMAIL_HOST, recipientemail
+    msg = EmailMultiAlternatives(subject, mail_message, from_email, [to])
+    msg.attach_alternative(mail_message, "text/html")
     msg.send()

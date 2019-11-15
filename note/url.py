@@ -5,19 +5,18 @@ from django.conf.urls import include, url
 from note import views
 from fundoo.swagger_view import schema_view
 
-
 urlpatterns = [
 
-
-    path("notes/",views.Create.as_view()),
-    path("note/<note_id>",views.Update.as_view(), name="note_view"),
-    path("noteshare", views.NoteShare.as_view()),
-    path("label/<label_id>", views.LabelsUpdate.as_view()),
-    path("label", views.LabelsCreate.as_view()),
-    path("archive", views.Archive.as_view()),
+    path("notes/", views.NoteCreate.as_view(), name="notes"),
+    path("note/<note_id>", views.NoteUpdate.as_view(), name="note_update"),
+    path("noteshare", views.NoteShare.as_view(), name="note_share"),
+    path("label/<label_id>", views.LabelsUpdate.as_view(), name="label_update"),
+    path("label", views.LabelsCreate.as_view(), name="label_get"),
+    path("archive", views.Archive.as_view(), name="archive"),
     # path("label", views.Labels/Create.as_view()),
-    path("trash", views.Trash.as_view()),
-    path("reminder", views.Reminders.as_view()),
-    path("lazy", views.LazyLoading.as_view()),
-    path("sns", views.Sns.as_view()),
+    path("trash", views.Trash.as_view(), name="trash"),
+    path("reminder", views.Reminders.as_view(), name="reminder"),
+    path("lazy", views.LazyLoading.as_view(), name="lazy"),
+    path("celery", views.Celery.as_view(), name="celery"),
+    path("search", views.SearchEngine.as_view(), name="search")
 ]

@@ -4,6 +4,7 @@ from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
 from django.contrib.auth.models import User
 
+from note.documents import NotesDocument
 from .models import Notes, Label #, UpdatedUser
 
 
@@ -24,3 +25,4 @@ class NoteAdmin(admin.ModelAdmin):
 # admin.site.register(updateduser,AuthorAdmin)
 admin.site.register(Notes, NoteAdmin)
 admin.site.register(Label)
+# admin.site.register(NotesDocument)

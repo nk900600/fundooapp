@@ -5,10 +5,11 @@ from pdb import set_trace
 
 import jwt
 from django.conf import settings
-from django.contrib.auth.models import User
+from django.contrib.auth.models import User, AnonymousUser
 from django.shortcuts import HttpResponse, redirect, get_object_or_404
 #
 # from note.views import collvalidator, labelvalidator
+from django.urls import path, include
 from jwt import DecodeError, InvalidTokenError
 from rest_framework_simplejwt.exceptions import InvalidToken
 
@@ -17,6 +18,7 @@ from note.models import Label, Notes
 from lib.redis import red
 from django.core import signing
 from pymitter import EventEmitter
+
 # from django.urls import reverse
 #
 # current_url = reverse(request.path_info).url_name
@@ -56,99 +58,44 @@ def login_decorator(function):
         """
         :return: will check token expiration
         """
-        smd = {"success": False, "message": "please login again", 'data': []}
+        response = {"success": False, "message": "please login again", 'data': []}
         try:
-            # pdb=set_trace
-            print(request.user)
-            if request.COOKIES.get(settings.SESSION_COOKIE_NAME) or request.user:
-                user = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
-
-                if user:
-                    logger.info("%s logged in using session login", request.user)
+            if request.META["HTTP_AUTHORIZATION"]:
+                try:
+                    header = request.META["HTTP_AUTHORIZATION"]
+                    token = header.split(" ")
+                    decode = jwt.decode(token[1], settings.SECRET_KEY)
+                    user = User.objects.get(id=decode['user_id'])
+                    if red.get(user.username) is None:
+                        logger.error("user credential were not found in redis ")
+                        response['message'] = "something went wrong please login back"
+                        return HttpResponse(json.dumps(response, indent=2), status=404)
+                    logger.info("%s logged in using simple jwt", user.username)
                     return function(request, *args, **kwargs)
-                else:
-                    return HttpResponse(json.dumps(smd))
-            else:
-                header = request.META["HTTP_AUTHORIZATION"]
-                token = header.split(" ")
-                decode = jwt.decode(token[1], settings.SECRET_KEY)
-                user = User.objects.get(id=decode['user_id'])
-                red.get(user.username)
-                logger.info("%s logged in using simple jwt", user.username)
-                return function(request, *args, **kwargs)
-        except KeyError as e:
-            logger.error("please login again")
-            return HttpResponse(json.dumps(smd, indent=2), status=404)
+                except jwt.exceptions.DecodeError as e:
+                    response["message"] = str(e)
+                    logger.error("token decode error")
+                    return HttpResponse(json.dumps(response, indent=2), status=404)
+                except jwt.exceptions.ExpiredSignatureError as e:
+                    logger.error("token expired ")
+                    response['message'] = str(e)
+                    return HttpResponse(json.dumps(response, indent=2), status=404)
+                except User.DoesNotExist as e:
+                    logger.error("token decode user id doesnt exist")
+                    response["message"] = str(e)
+                    return HttpResponse(json.dumps(response, indent=2), status=404)
+        except KeyError:
+            pass
+
+        if request.COOKIES.get(settings.SESSION_COOKIE_NAME) is None:
+            logger.error("session_id not present or expired")
+            response = {"success": False, "message":  "something went wrong please login again", 'data': []}
+            return HttpResponse(json.dumps(response, indent=2), status=404)
+        else:
+            logger.info("%s logged in using social login ", request.user)
+            return function(request, *args, **kwargs)
 
     return wrapper
-
-
-# def label_coll_validator_post(function):
-#     """
-#     :param function: function is called
-#     :return: will check token expiration
-#     """
-#
-#     def wrapper(request):
-#         try:
-#             if labelvalidator(request.data['label'], request.user.id):
-#                 smd = {'success': False, 'message': 'label is not created by this user or user does not exist',
-#                        'data': []}
-#                 return HttpResponse(json.dumps(smd, indent=2), status=400)
-#         except KeyError:
-#             pass
-#         try:
-#             # pdb.set_trace()
-#             if collvalidator(request.data['collaborators']):
-#                 smd = {'success': False, 'message': 'email not vaild',
-#                        'data': []}
-#                 return HttpResponse(json.dumps(smd, indent=2), status=400)
-#         except KeyError:
-#             pass
-#
-#         return function(request)
-#
-#     return wrapper
-
-
-class LabelCollaborators:
-    def __init__(self, function):
-        self.function = function
-        # One-time configuration and initialization.
-
-    def __call__(self, request):
-        # Code to be executed for each request before
-        # the view (and later middleware) are called.
-
-        if request.get_full_path()=="/api/notes/":
-
-            try:
-                print(request.get_full_path())
-                z=json.loads(request.body)
-
-                if labelvalidator(z['label'], request.user.id):
-                    smd = {'success': False, 'message': 'label is not created by this user or user does not exist',
-                           'data': []}
-                    return HttpResponse(json.dumps(smd, indent=2), status=400)
-            except KeyError:
-                pass
-            try:
-                # pdb.set_trace()
-                if collvalidator(request.body):
-                    smd = {'success': False, 'message': 'email not vaild',
-                           'data': []}
-                    return HttpResponse(json.dumps(smd, indent=2), status=400)
-            except KeyError:
-                pass
-
-            response = self.function(request)
-            return response
-        else:
-            pass
-        # Code to be executed for each request/response after
-        # the view is called.
-
-
 
 
 def label_coll_validator_put(function):

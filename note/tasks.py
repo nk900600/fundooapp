@@ -13,7 +13,7 @@ app = Celery('hello', broker="amqp://guest@localhost//")
 app.conf.beat_schedule = {
     'test-task': {
         'task': 'tasks.email',
-        'schedule': datetime.timedelta(seconds=55),
+        # 'schedule': datetime.timedelta(seconds=55),
     },
 }
 

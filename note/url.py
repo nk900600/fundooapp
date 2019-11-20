@@ -16,7 +16,8 @@ urlpatterns = [
     # path("label", views.Labels/Create.as_view()),
     path("trash", views.Trash.as_view(), name="trash"),
     path("reminder", views.Reminders.as_view(), name="reminder"),
-    path("lazy", views.LazyLoading.as_view(), name="lazy"),
+    # path("lazy", views.LazyLoading.as_view(), name="lazy"),
     path("celery", views.Celery.as_view(), name="celery"),
-    path("search", views.SearchEngine.as_view(), name="search")
+    path("search", views.SearchEngine.as_view(), name="search"),
+
 ]

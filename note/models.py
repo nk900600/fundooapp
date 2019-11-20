@@ -2,11 +2,11 @@ from django.contrib.auth.models import User, AbstractUser
 from django.db import models
 from colorful.fields import RGBColorField
 
-
+#
 # from fundoo.settings import AUTH_USER_MODEL
 
 
-# class UpdatedUser(models.Model):
+# class UpdatedUser(AbstractUser):
 #     image = models.ImageField(upload_to='image', default=None)
 #     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="user_profile", default='admin')
 
@@ -17,11 +17,11 @@ class Label(models.Model):
 
     def __str__(self):
         return self.name
-
-    def __eq__(self, other):
-        if isinstance(other, Label):
-            return self.name == other.name
-        return "cannot equalize different classes"
+    #
+    # def __eq__(self, other):
+    #     if isinstance(other, Label):
+    #         return self.name == other.name
+    #     return "cannot equalize different classes"
 
     def __repr__(self):
         return "Label({!r},{!r})".format(self.user, self.name)
@@ -54,10 +54,10 @@ class Notes(models.Model):
     def __str__(self):
         return self.note
 
-    def __eq__(self, other):
-        if isinstance(other, Notes):
-            return self.note == other.note
-        return "cannot equalize different classes"
+    # def __eq__(self, other):
+    #     if isinstance(other, Notes):
+    #         return self.note == other.note
+    #     return "cannot equalize different classes"
 
     def __repr__(self):
         return "Note({!r},{!r},{!r})".format(self.user, self.title, self.note)

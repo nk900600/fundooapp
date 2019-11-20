@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
         <meta charset="UTF-8">
      <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
+{#  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">#}
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
     <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
@@ -14,7 +14,7 @@
 <body>
 <style>
 img {
-  background: #F1F1FA;
+  background: {{ notes }};
   width: 400px;
   height: 300px;
   display: block;
@@ -23,94 +23,42 @@ img {
 }
 </style>
 
-{% comment %}<div class="container" style="margin-top:30px ">
-    <div class="row" align="center">
-        <div class="col-8 offset-2">
-                <table class="table table-bordered">
-                  <thead>
-                            <tr>
-                                    <th>Title</th>
-                                    <th>Note</th>
-                                    <th>Url</th>
 
-                            </tr>
-                  </thead>
-                  <tbody>
-                    {% for note in notes %}
-                      <tr>
-                          <td class="data-lazy" id="{{ note.title }}" data-lazy="{{ note.title }}"></td>
-                          <td class="data-lazy" id="{{ note.note }}"  data-lazy="{{ note.note }}"></td>
-                          <td class="data-lazy" id="{{ note.url }}"  data-lazy="{{ note.url }}" ></td>
-                      <script>
-
-
-                            var targets = document.querySelectorAll('.data-lazy');
-                            var lazyloads=target=>{
-                                var io = new IntersectionObserver((entries,observer)=>{
-                                    entries.forEach(entry=>{
-                                        if (entry.isIntersecting){
-                                            var td=entry.target;
-                                            var src= td.getAttribute('data-lazy');
-                                            document.getElementById("{{ note.note }}").textContent = {{ note.note }};
-                                            td.setAttribute('src',src);
-                                            observer.disconnect();
-                                        }
-                                    });
-                                });
-                        io.observe(target)
-                            };
-                        targets.forEach(lazyloads);
+{#<img  src="https://ik.imagekit.io/demo/img/image1.jpeg?tr=w-400,h-300" >#}
+{#<img  src="https://ik.imagekit.io/demo/img/image2.jpeg?tr=w-400,h-300" >#}
+{#<img  src="https://ik.imagekit.io/demo/img/image3.jpg?tr=w-400,h-300" >#}
+<img src="image10.jpeg" >
+{#<img  class="data-lazy" data-lazy="https://ik.imagekit.io/demo/img/image5.jpeg?tr=w-400,h-300" >#}
+{#<img class="data-lazy" data-lazy="https://ik.imagekit.io/demo/img/image6.jpeg?tr=w-400,h-300" >#}
+{#<img class="data-lazy" data-lazy="https://ik.imagekit.io/demo/img/image7.jpeg?tr=w-400,h-300" >#}
+{#<img class="data-lazy" data-lazy="https://ik.imagekit.io/demo/img/image8.jpeg?tr=w-400,h-300" >#}
+{#<img class="data-lazy" data-lazy="https://ik.imagekit.io/demo/img/image9.jpeg?tr=w-400,h-300" >#}
+{#<img class="data-lazy"  data-lazy="https://ik.imagekit.io/demo/img/image10.jpeg?tr=w-400,h-300" >#}
+{##}
+{#<script>#}
+{##}
+{##}
+{#        const targets = document.querySelectorAll('.data-lazy');#}
+{#        const lazyloads=target=>{#}
+{#            console.log(target);#}
+{#            const io = new IntersectionObserver((entries,observer)=>{#}
+{#                entries.forEach(entry=>{#}
+{#                    console.log(entry);#}
+{#                    if (entry.isIntersecting){#}
+{#                        const td=entry.target;#}
+{#                        const src= td.getAttribute('data-lazy');#}
+{#                        td.setAttribute('src',src);#}
+{#                        observer.disconnect();#}
+{#                    }#}
+{#                });#}
+{#            });#}
+{#    io.observe(target)#}
+{#        };#}
+{#    targets.forEach(lazyloads);#}
 
 
-
-                    </script>
-
-
-                      </tr>
-                    {% endfor %}
-                  </tbody>
-                </table>
-
-                     </div>
-                            </div>
-                                 </div>{% endcomment %}
-
-
-<img  src="https://ik.imagekit.io/demo/img/image1.jpeg?tr=w-400,h-300" >
-<img  src="https://ik.imagekit.io/demo/img/image2.jpeg?tr=w-400,h-300" >
-<img  src="https://ik.imagekit.io/demo/img/image3.jpg?tr=w-400,h-300" >
-<img class="data-lazy" data-lazy="https://ik.imagekit.io/demo/img/image4.jpeg?tr=w-400,h-300" >
-<img  class="data-lazy" data-lazy="https://ik.imagekit.io/demo/img/image5.jpeg?tr=w-400,h-300" >
-<img class="data-lazy" data-lazy="https://ik.imagekit.io/demo/img/image6.jpeg?tr=w-400,h-300" >
-<img class="data-lazy" data-lazy="https://ik.imagekit.io/demo/img/image7.jpeg?tr=w-400,h-300" >
-<img class="data-lazy" data-lazy="https://ik.imagekit.io/demo/img/image8.jpeg?tr=w-400,h-300" >
-<img class="data-lazy" data-lazy="https://ik.imagekit.io/demo/img/image9.jpeg?tr=w-400,h-300" >
-<img class="data-lazy"  data-lazy="https://ik.imagekit.io/demo/img/image10.jpeg?tr=w-400,h-300" >
-
-<script>
-
-
-        const targets = document.querySelectorAll('.data-lazy');
-        const lazyloads=target=>{
-            console.log(target);
-            const io = new IntersectionObserver((entries,observer)=>{
-                entries.forEach(entry=>{
-                    console.log(entry);
-                    if (entry.isIntersecting){
-                        const td=entry.target;
-                        const src= td.getAttribute('data-lazy');
-                        td.setAttribute('src',src);
-                        observer.disconnect();
-                    }
-                });
-            });
-    io.observe(target)
-        };
-    targets.forEach(lazyloads);
-
-
-
-</script>
+{##}
+{#</script>#}
 
 </body>
 

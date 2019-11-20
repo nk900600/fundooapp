@@ -5,7 +5,7 @@
 <head>
     <meta charset="UTF-8">
      <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Email Validation</title>
+    <title>Reminder mail</title>
 <style>
 
 .button {
@@ -80,21 +80,19 @@ width: 30%;
         <div class="column" align="center">
             <div class="w3-col.m8">
                   <h2 id="logo">Fundoo</h2><br>
-                  <h4 id ="menu_text">Please confirm your email address </h4><br>
+                  <h4 id ="menu_text">Reminder mail </h4><br>
                   <!--div class="fakeimg">Fake Image<!/div-->
-                  <p>You have created a fundoo ID with the username: {{ user }}. As an extra security measure, please verify this is the correct email address linked to your fundoo ID by clicking the button below. </p>
+                  <p>You have created a note with the username: {{ user }}.  </p>
                 <br> <ul class="nav nav-pills nav-justified ">
-                      <a class="button" href="http://{{ domain }}{%  url 'reset_password' surl=surl %}" >Confirm your Email with fundoo</a>
+                      <a class="button" href="http://{{ domain }}{%  url 'note_view' note_id=note_id %}" >Click on the link to fetch the note</a>
 
                 </ul>
-                <small>This link will expire in 2 days. </small><br><br>
+
                  </div>
 
 
                  <div class="col-10 offset-1">
-                <small style="font-size: x-small">You have received this email because the user {{ user }} has requested to
-                    add this email to the fundoo account at <a href="#">fundoo</a>. You can safely disregard this message if
-                    you did not add this email address. </small><br>
+                <small style="font-size: x-small">You have received this email because the user {{ user }} has set reminder on the note. </small><br>
                      </div>
             <div class="col-2 offset-5" >
                 <br><br>

@@ -19,9 +19,6 @@ from django.http import HttpResponse
 from django.shortcuts import render, redirect
 
 # Create your views here.
-
-
-
 from authlib.integrations.requests_client import OAuth2Session
 from rest_framework.generics import GenericAPIView
 
@@ -34,6 +31,7 @@ from socialapp.models import SocialLogin
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 logger.addHandler(file_handler)
+
 
 class Github(GenericAPIView):
     """
@@ -49,11 +47,17 @@ class Github(GenericAPIView):
 
     def get(self, request):
         # pdb.set_trace()
-        auth_url = AUTH_GITHUB_URL
-        scope = 'user:email'
-        client = OAuth2Session(SOCIAL_AUTH_GITHUB_KEY, SOCIAL_AUTH_GITHUB_SECRET, scope=scope)
-        url, state = client.create_authorization_url(auth_url)
-        return redirect(url)
+        resp = {'success': False, 'message': "something went wrong", 'data': []}
+        try:
+            auth_url = AUTH_GITHUB_URL
+            scope = 'user:email'
+            client = OAuth2Session(SOCIAL_AUTH_GITHUB_KEY, SOCIAL_AUTH_GITHUB_SECRET, scope=scope)
+            url, state = client.create_authorization_url(auth_url)
+            logger.info("redirected user to github login page",)
+            return redirect(url)
+        except Exception as e:
+            logger.error("got %s error while redirecting the user to github login page ", str(e))
+            return HttpResponse(resp,status=404)
 
 
 class Oauth(GenericAPIView):
@@ -102,7 +106,7 @@ class Oauth(GenericAPIView):
                 token = token_validation(user.username, response.json()["id"])
                 auth.login(request, user)
                 red.set(user.username, token)
-
+                logger.info("%s logged in using social auth ",user.username)
                 # return redirect("/api/notes/")
             else:
 
@@ -119,6 +123,8 @@ class Oauth(GenericAPIView):
                     user.save()
                     token = token_validation(username, response.json()["id"])
                     red.set(user.username, token)
+                    logger.info("%s logged in as well as user got registered but username already exixt so his id "
+                                "is as his username ", user.username)
                 else:
 
                     # here we will save the user details and generate jwt token and then redirect to dashboard.
@@ -127,9 +133,10 @@ class Oauth(GenericAPIView):
                     user.save()
                     token = token_validation(username, response.json()["id"])
                     red.set(user.username, token)
+                    logger.info("%s logged in as well as user got registered ", user.username)
 
-            # once
+            # once user is registered or logged in user is redirected to dashboard
             return redirect("/api/notes/")
         except Exception as e:
-
-            return HttpResponse("somethoing ")
+            logger.error("error: %s while registering user or while logging in ",str(e))
+            return HttpResponse(resp ,status=404)

@@ -2,8 +2,7 @@ from locust import HttpLocust, TaskSet, between
 
 header = {
     "Content-Type": 'application/json',
-    'Authorization': "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9"
-                     ".eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNTczODk0MjkyLCJqdGkiOiI1MzAzNTViYWU5Nzg0MWM1OWVmMWQxMWI4NzkxMmUyYSIsInVzZXJfaWQiOjF9.bXAAC45gOD-XSjwxf7iGw7IsfwQEjMj78Nh-jNbwdEo"}
+    'Authorization': "Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJ0b2tlbl90eXBlIjoiYWNjZXNzIiwiZXhwIjoxNTc0Mzk4NjEyLCJqdGkiOiJjMWYzZTE4Mjc4Mzc0MWVhODM0MTRlYjViMjMwZGJiZiIsInVzZXJfaWQiOjF9.5AkRWKN8wpeLMOZsGWgSdomDv_GdKsWibwZCv-pUjeU"}
 
 
 def login(l):
@@ -71,15 +70,15 @@ def trash(l):
 
 
 class UserBehavior(TaskSet):
-    tasks = {#noteget: 1,  notepost: 1, noteput: 1, notedel: 1, labelget: 1,
-            labelpost: 1,}# labelput: 1, labeldelete: 1, trash: 1, archive: 1, reminder: 1,
-             #search: 1, resetpassword: 1, forgotpassword: 1}
+    tasks = {noteget: 1,  notepost: 1, noteput: 1, notedel: 1, labelget: 1,
+            labelpost: 1, labelput: 1, labeldelete: 1, trash: 1, archive: 1, reminder: 1,
+             search: 1, resetpassword: 1, forgotpassword: 1}
 
-    # def on_start(self):
-    #     login(self)
+    def on_start(self):
+        login(self)
 
-    # def on_stop(self):
-    #     logout(self)
+    def on_stop(self):
+        logout(self)
 
 
 class WebsiteUser(HttpLocust):

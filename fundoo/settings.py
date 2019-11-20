@@ -20,7 +20,7 @@ from pathlib import *
 
 load_dotenv(find_dotenv())
 env_path = Path(".") / '.env'
-
+KK = os.getenv('AUTH_ENDPOINT')
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -32,7 +32,7 @@ SECRET_KEY = 'c0^3dqg=o*50pydia@pd!)v*psi9i+1@0m%#fe&m*!&cp^b06d'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
-
+BROKER_URL = 'amqp://guest@localhost//'
 ALLOWED_HOSTS = ["*"]
 
 # Application definition
@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'elasticapm.contrib.django',
     'user',
     'note',
     'oauth2_provider',
@@ -55,9 +56,22 @@ INSTALLED_APPS = [
     'corsheaders',
     'django_short_url',
     "django_cron", 'django_crontab',
-    'django_inlinecss'
-]
+    'django_inlinecss',
+    "colorful",
+    "django_elasticsearch_dsl",
+    'django_nose',
+    "socialapp",
 
+]
+TEST_RUNNER = 'django_nose.NoseTestSuiteRunner'
+
+NOSE_ARGS = [
+    'note/tests.py',
+    'user/tests.py',
+    # '–cover-package=note,user',
+    # '–cover-inclusive',
+]
+CELERY_HIT_POINT = os.getenv("CELERY_HIT_POINT")
 CRON_CLASSES = [
     "fundoo.cron.MyCronJob",
 ]
@@ -66,11 +80,14 @@ DJANGO_CRON_LOCK_BACKEND = "django_cron.backends.lock.cache.CacheLock"
 DB = 0
 PORT = 6379
 
+GRAPPELLI_CLEAN_INPUT_TYPES = False
+
 MIDDLEWARE = [
+
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -79,8 +96,36 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'social_django.middleware.SocialAuthExceptionMiddleware',
     # 'shortcircuit.middleware.ShortcutCircuit',
-    'note.decorators.LabelCollaborators'
+    # 'note.decorators.LoginDecorator'
+    'middlewares.label_email_validators.LabelCollaborators',
+    'elasticapm.contrib.django.middleware.TracingMiddleware',
+    #
+    # 'security.middleware.DoNotTrackMiddleware',
+    # 'security.middleware.ContentNoSniff',
+    # 'security.middleware.XssProtectMiddleware',
+    # 'security.middleware.XFrameOptionsMiddleware',
+
 ]
+
+
+ELASTICSEARCH_DSL = {
+    'default': {
+        'hosts': 'localhost:9200',
+
+    },
+}
+
+ELASTIC_APM = {
+  # Set required service name. Allowed characters:
+  # a-z, A-Z, 0-9, -, _, and space
+  'SERVICE_NAME': 'fundoo',
+
+  # Use if APM Server requires a token
+  'SECRET_TOKEN': 'fundoo',
+
+  # Set custom APM Server URL (default: http://localhost:8200)
+  'SERVER_URL': 'http://localhost:8200',
+}
 
 ROOT_URLCONF = 'fundoo.urls'
 
@@ -123,11 +168,11 @@ DATABASES = {
 
 SITE_ID = 1
 AUTHENTICATION_BACKENDS = (
-    'social_core.backends.github.GithubOAuth2',
-    'social_core.backends.twitter.TwitterOAuth',
-    'social_core.backends.facebook.FacebookOAuth2',
-    'social_core.backends.google.GoogleOAuth2',
-    'oauth2_provider.backends.OAuth2Backend',
+    # 'social_core.backends.github.GithubOAuth2',
+    # 'social_core.backends.twitter.TwitterOAuth',
+    # 'social_core.backends.facebook.FacebookOAuth2',
+    # 'social_core.backends.google.GoogleOAuth2',
+    # 'oauth2_provider.backends.OAuth2Backend',
     'django.contrib.auth.backends.ModelBackend',
 )
 
@@ -167,12 +212,11 @@ USE_TZ = True
 #
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')
-
+# AUTH_USER_MODEL = "note.UpdatedUser"
 # STATICFILES_DIRS = (os.path.join(BASE_DIR, "sfiles"), )
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-
 
 # PROJECT_PATH = os.path.dirname(os.path.abspath(__file__))
 # print(BASE_DIR)
@@ -202,7 +246,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 LOGIN_URL = 'login/'
 LOGOUT_URL = 'logout/'
-LOGIN_REDIRECT_URL = '/api/note'
+LOGIN_REDIRECT_URL = '/api/auth'
 SOCIALACCOUNT_QUERY_EMAIL = True
 AWS_BUCKET = os.getenv("AWS_BUCKET")
 EMAIL_BACKENDS = 'django.core.main.backends.console.EmailBackends'
@@ -218,13 +262,13 @@ BASE_URL = os.getenv('BASE_URL')
 # }
 #
 REST_FRAMEWORK = {
-        'DEFAULT_AUTHENTICATION_CLASSES': (
-            'rest_framework_simplejwt.authentication.JWTAuthentication',
-            'rest_framework.authentication.SessionAuthentication',
-            'rest_framework.authentication.BasicAuthentication'
-            )
-            ,
-        'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication'
+    )
+    ,
+    'DEFAULT_SCHEMA_CLASS': 'rest_framework.schemas.coreapi.AutoSchema',
 }
 
 EMAIL_USE_TLS = True
@@ -275,9 +319,16 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_LIFETIME': datetime.timedelta(minutes=5),
     'SLIDING_TOKEN_REFRESH_LIFETIME': datetime.timedelta(days=1),
 }
+SESSION_COOKIE_SECURE=False
 SOCIAL_AUTH__EMAIL_REQUIRED = True
 SOCIAL_AUTH_GITHUB_KEY = os.getenv("SOCIAL_AUTH_GITHUB_KEY")
 SOCIAL_AUTH_GITHUB_SECRET = os.getenv("SOCIAL_AUTH_GITHUB_SECRET")
+AUTH_GITHUB_URL= os.getenv("AUTH_GITHUB_URL")
+AUTH_GITHUB_TOKEN_URL= os.getenv("AUTH_GITHUB_TOKEN_URL")
+AUTH_GITHUB_USER_URL= os.getenv("AUTH_GITHUB_USER_URL")
+AUTH_GITHUB_USER_EMAIL_URL= os.getenv("AUTH_GITHUB_USER_EMAIL_URL")
+
+
 
 SOCIAL_AUTH_FACEBOOK_KEY = os.getenv("SOCIAL_AUTH_FACEBOOK_KEY")  # App ID
 SOCIAL_AUTH_FACEBOOK_SECRET = os.getenv("SOCIAL_AUTH_FACEBOOK_SECRET")  # App Secret
@@ -296,12 +347,8 @@ SOCIAL_AUTH_FACEBOOK_SCOPE = ['email', 'user_link']  # add this
 SOCIAL_AUTH_FACEBOOK_PROFILE_EXTRA_PARAMS = {  # add this
     'fields': 'id, name, email, picture.type(large), link'
 }
-from social_core.backends.github import GithubOAuth2
 
-SOCIAL_AUTH_GITHUB_SCOPE = ['user:email']
-SOCIAL_AUTH_GITHUB_PROFILE_EXTRA_PARAMS = {  # add this
-    'fields': 'id, name, email, link'
-}
+
 
 CRONJOBS = [
     ('*/59 * * * *', 'note.cron.my_scheduled_job', '>> ~/cron.log')
@@ -314,12 +361,12 @@ DJANGO_CRON_CACHE = 'cron_cache'
 
 formatter = logging.Formatter('%(levelname)s :%(asctime)s :%(pathname)s :%(lineno)s :%(thread)d  :%(threadName)s :%('
                               'process)d :%(message)s')
-file_handler = logging.FileHandler('fundoo.log')
+file_handler = logging.FileHandler(filename='/home/admin1/fundoo.log')
 file_handler.setFormatter(formatter)
 # logger.addHandler(file_handler)
 
 TEST_TOKEN = os.getenv('TEST-TOKEN')
 
-AUTH_ENDPOINT=os.getenv('AUTH_ENDPOINT')
+AUTH_ENDPOINT = os.getenv('AUTH_ENDPOINT')
 
 BROKER = os.getenv('BROKER')

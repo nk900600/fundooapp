@@ -11,6 +11,6 @@ from fundoo.swagger_view import schema_view
 
 urlpatterns = [
 
-    path("auth/", views.Oauth.as_view(), name="Oauth"),
+    path("auth/", views.Oauth.as_view(), name="oauth"),
     path("github/", views.Github.as_view(), name="github"),
 ]

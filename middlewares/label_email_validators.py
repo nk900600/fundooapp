@@ -1,5 +1,6 @@
 import json
 import logging
+import pdb
 
 from django.shortcuts import HttpResponse, redirect, get_object_or_404
 
@@ -28,12 +29,11 @@ class LabelCollaborators:
     def __call__(self, request, *args, **kwargs):
         # Code to be executed for each request before
         # the view (and later middleware) are called.
-
+        # pdb.set_trace()
         if request.get_full_path() == "/api/notes/" and request.method == 'POST':
-            z = json.loads(request.body)
-
             try:
-                if labelvalidator(z['label'], request.user.id):
+                lable= request.POST["label"]
+                if labelvalidator(lable['label'], request.user.id):
                     smd = {'success': False, 'message': 'label is not created by this user or user does not exist',
                            'data': []}
                     return HttpResponse(json.dumps(smd, indent=2), status=400)
@@ -41,7 +41,8 @@ class LabelCollaborators:
                 pass
             try:
                 # pdb.set_trace()
-                if collvalidator(z['collaborators']):
+                collaborators = request.POST["collaborators"]
+                if collvalidator(collaborators['collaborators']):
                     smd = {'success': False, 'message': 'email not vaild',
                            'data': []}
                     return HttpResponse(json.dumps(smd, indent=2), status=400)

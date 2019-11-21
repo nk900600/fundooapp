@@ -1,5 +1,7 @@
 import json
 import logging
+import pdb
+import re
 
 import jwt
 from django.conf import settings
@@ -23,36 +25,47 @@ class LoginDecorator:
     def __call__(self, request , *args, **kwargs):
         # Code to be executed for each request before
         # the view (and later middleware) are called.
-        # url = [
-        #     path("api/", include('note.url'))]
-
-        # if url:
-
-        smd = {"success": False, "message": "please login again", 'data': []}
-        try:
-            # pdb=set_trace
-
-            if request.COOKIES.get(settings.SESSION_COOKIE_NAME) or request.user:
-                user = request.COOKIES.get(settings.SESSION_COOKIE_NAME)
-
-                if user:
-                    logger.info("%s logged in using session login", request.user)
-                    return self.function(request, *args, **kwargs)
-                else:
-                    return HttpResponse(json.dumps(smd))
-            else:
-                header = request.META["HTTP_AUTHORIZATION"]
-                token = header.split(" ")
-                decode = jwt.decode(token[1], settings.SECRET_KEY)
-                user = User.objects.get(id=decode['user_id'])
-                red.get(user.username)
-                logger.info("%s logged in using simple jwt", user.username)
+        # pdb.set_trace()
+        if re.match("/api/+\w",request.get_full_path()):
+            if re.match("/api/token/",request.get_full_path()):
                 return self.function(request, *args, **kwargs)
+            response = {"success": False, "message": "please login again", 'data': []}
 
-        except KeyError as e:
-            logger.error("please login again")
-            # return HttpResponse(json.dumps(smd, indent=2), status=404)
+            try:
+                if request.META["HTTP_AUTHORIZATION"]:
+                    try:
+                        header = request.META["HTTP_AUTHORIZATION"]
+                        token = header.split(" ")
+                        decode = jwt.decode(token[1], settings.SECRET_KEY)
+                        user = User.objects.get(id=decode['user_id'])
+                        if red.get(user.username) is None:
+                            logger.error("user credential were not found in redis ")
+                            response['message'] = "something went wrong please login back"
+                            return HttpResponse(json.dumps(response, indent=2), status=404)
+                        logger.info("%s logged in using simple jwt", user.username)
+                        return self.function(request, *args, **kwargs)
+                    except jwt.exceptions.DecodeError as e:
+                        response["message"] = str(e)
+                        logger.error("token decode error")
+                        return HttpResponse(json.dumps(response, indent=2), status=404)
+                    except jwt.exceptions.ExpiredSignatureError as e:
+                        logger.error("token expired ")
+                        response['message'] = str(e)
+                        return HttpResponse(json.dumps(response, indent=2), status=404)
+                    except User.DoesNotExist as e:
+                        logger.error("token decode user id doesnt exist")
+                        response["message"] = str(e)
+                        return HttpResponse(json.dumps(response, indent=2), status=404)
+            except KeyError:
+                pass
 
-        # return response
-        # else:
-        #     response = self.function(request)
+            if request.COOKIES.get(settings.SESSION_COOKIE_NAME) is None:
+                logger.error("session_id not present or expired")
+                response = {"success": False, "message": "something went wrong please login again", 'data': []}
+                return HttpResponse(json.dumps(response, indent=2), status=404)
+            else:
+                logger.info("%s logged in using social login ", request.user)
+                return self.function(request, *args, **kwargs)
+        else:
+
+            return self.function(request, *args, **kwargs)

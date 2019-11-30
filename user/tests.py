@@ -167,6 +167,7 @@ class LoginsTest(TestCase):
         resp = self.client.post(url, {'username': 'admin', 'password': 'admin'}, )
         self.assertEqual(resp.status_code, 201)
 
+
     def test_login2(self):
         url = BASE_URL + reverse('login')
         resp = self.client.post(url, {'username': 'rfg', 'password': 'fg'}, )

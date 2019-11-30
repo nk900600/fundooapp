@@ -1,6 +1,6 @@
-# from elasticsearch_dsl import connections
+from elasticsearch_dsl import connections
 #
-# connections.create_connection(hosts=['localhost'], timeout=20)
+connections.create_connection(hosts=['localhost'], timeout=20)
 from django.contrib.auth.models import User
 from django_elasticsearch_dsl import Document
 from .models import Notes, Label
@@ -16,7 +16,7 @@ from elasticsearch_dsl import analyzer, tokenizer
 
 html_strip = analyzer(
     'html_strip',
-    tokenizer=tokenizer('trigram', 'nGram', min_gram=1, max_gram=1),
+    tokenizer=tokenizer('trigram', 'nGram', min_gram=3, max_gram=3),
     filter=["lowercase", "stop", "snowball"]
 )
 
@@ -44,8 +44,6 @@ class NotesDocument(Document):
         analyzer=html_strip
     )
 
-
-
     class Index:
         # Name of the Elasticsearch index
         name = 'note'
@@ -54,4 +52,4 @@ class NotesDocument(Document):
                     'number_of_replicas': 0}
 
     class Django:
-        model = Notes  # The model associated with this Document
+        model = Notes # The model associated with this Document

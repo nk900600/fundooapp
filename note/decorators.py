@@ -104,7 +104,7 @@ def label_coll_validator_put(function):
     :return: will check token expiration
     """
 
-    def wrapper(request, note_id):
+    def wrapper(request, note_id ,*args,**kwargs):
         user = request.user
         try:
             label = request.data['label']
@@ -124,7 +124,7 @@ def label_coll_validator_put(function):
                 return HttpResponse(json.dumps(smd, indent=2), status=400)
         except KeyError:
             pass
-        return function(request, note_id)
+        return function(request, note_id,*args,**kwargs)
 
     return wrapper
 
